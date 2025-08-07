@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,6 @@ export default function WorkspaceHeader() {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
-            className="md:hidden"
         >
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Sidebar</span>
