@@ -1,3 +1,4 @@
+
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -10,7 +11,12 @@ import ImageGrid from "@/components/home/image-grid";
 import AnimatedBackground from "@/components/layout/animated-background";
 
 export default function Home() {
-  const images: { id: number; src: string; alt: string; hint: string; }[] = [];
+    const images = Array.from({ length: 9 }, (_, i) => ({
+        id: i + 1,
+        src: 'https://placehold.co/600x800.png',
+        alt: `Pagoda at night ${i + 1}`,
+        hint: 'pagoda night'
+    }));
 
   return (
     <SidebarProvider>
