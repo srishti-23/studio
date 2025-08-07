@@ -45,30 +45,28 @@ export default function Header() {
         </Button>
         
         {isLoggedIn ? (
-          <Button variant="ghost" onClick={handleLogout} className="hidden md:inline-flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <span>Guest User</span>
-            <ChevronDown className="h-4 w-4" />
-          </Button>
+          <>
+            <Button variant="ghost" onClick={handleLogout} className="hidden md:inline-flex items-center gap-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+              <span>Guest User</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="md:hidden" onClick={handleLogout}>
+              <User className="h-5 w-5" />
+              <span className="sr-only">Profile</span>
+            </Button>
+          </>
         ) : (
           <>
-            <Button variant="ghost" onClick={handleLogin} className="hidden md:inline-flex">
+            <Button onClick={handleLogin} className="rounded-full">
                 <LogIn className="h-4 w-4 mr-2" />
-                Login
-            </Button>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full hidden md:inline-flex">
-                Sign Up
+                Login / Sign Up
             </Button>
           </>
         )}
-        
-        <Button variant="outline" size="icon" className="md:hidden" onClick={isLoggedIn ? handleLogout : handleLogin}>
-            {isLoggedIn ? <User className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
-            <span className="sr-only">{isLoggedIn ? 'Profile' : 'Login'}</span>
-        </Button>
       </div>
     </header>
   );
