@@ -8,17 +8,11 @@ import * as z from "zod";
 import {
   ArrowUp,
   ImageIcon,
-  Plus,
-  Sparkles,
   LoaderCircle,
-  Settings2,
-  ChevronDown,
 } from "lucide-react";
 
 import { generateAd } from "@/lib/actions";
-import { refinePrompt } from "@/ai/flows/refine-prompt";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -27,13 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
-  FormMessage,
 } from "@/components/ui/form";
 import {
   Tooltip,
@@ -60,8 +52,6 @@ export default function PromptForm({
   initialPrompt = "",
 }: PromptFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isRefining, setIsRefining] = useState(false);
-  const { toast } = useToast();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -72,50 +62,16 @@ export default function PromptForm({
     },
   });
 
-  const handleRefinePrompt = async () => {
-    const userPrompt = form.getValues("prompt");
-    if (!userPrompt) {
-      toast({
-        title: "Cannot Refine",
-        description: "Please enter a prompt before refining.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsRefining(true);
-    try {
-      const result = await refinePrompt({
-        userPrompt,
-        previousImageUrls: imageUrls.slice(0, 3),
-      });
-      form.setValue("prompt", result.refinedPrompt, { shouldValidate: true });
-      toast({
-        title: "Prompt Refined!",
-        description: "Your prompt has been enhanced by AI.",
-      });
-    } catch (error) {
-      console.error("Error refining prompt:", error);
-      toast({
-        title: "Refinement Failed",
-        description: "Could not refine the prompt. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
   const onSubmit = async () => {
     setIsSubmitting(true);
   };
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/0 to-background/0">
+    <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/90 to-transparent">
       <div className="w-full max-w-3xl mx-auto">
         <Form {...form}>
           <form action={generateAd} onSubmit={onSubmit} className="relative">
-            <div className="relative flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/50 backdrop-blur-xl p-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50">
+            <div className="relative flex flex-col gap-2 rounded-2xl border border-border bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50">
               <Textarea
                 {...form.register("prompt")}
                 placeholder="Describe what you want to create..."
@@ -123,11 +79,11 @@ export default function PromptForm({
                 rows={1}
               />
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground">
                                     <ImageIcon />
                                 </Button>
                             </TooltipTrigger>
@@ -144,7 +100,7 @@ export default function PromptForm({
                         <FormItem>
                         <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
                             <FormControl>
-                            <SelectTrigger className="w-[120px] h-8 bg-transparent border-0 text-white/50 hover:bg-white/10 hover:text-white focus:ring-0">
+                            <SelectTrigger className="w-[120px] h-8 bg-transparent border-none text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="Variations" />
                             </SelectTrigger>
                             </FormControl>
@@ -166,7 +122,7 @@ export default function PromptForm({
                             <FormItem>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
-                                <SelectTrigger className="w-[110px] h-8 bg-transparent border-0 text-white/50 hover:bg-white/10 hover:text-white focus:ring-0">
+                                <SelectTrigger className="w-[110px] h-8 bg-transparent border-none text-muted-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0">
                                     <SelectValue placeholder="Aspect Ratio" />
                                 </SelectTrigger>
                                 </FormControl>
@@ -203,5 +159,3 @@ export default function PromptForm({
     </div>
   );
 }
-
-    
