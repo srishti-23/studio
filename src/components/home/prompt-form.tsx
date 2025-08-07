@@ -111,14 +111,14 @@ export default function PromptForm({
   };
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-transparent">
+    <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/0 to-background/0">
       <div className="w-full max-w-3xl mx-auto">
         <Form {...form}>
           <form action={generateAd} onSubmit={onSubmit} className="relative">
-            <div className="relative flex flex-col gap-4 rounded-xl border border-white/10 bg-black/50 backdrop-blur-xl p-2 shadow-2xl">
+            <div className="relative flex flex-col gap-2 rounded-2xl border border-white/10 bg-black/50 backdrop-blur-xl p-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50">
               <Textarea
                 {...form.register("prompt")}
-                placeholder="What do you want to see..."
+                placeholder="Describe what you want to create..."
                 className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-2"
                 rows={1}
               />
@@ -136,6 +136,50 @@ export default function PromptForm({
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
+
+                    <FormField
+                    control={form.control}
+                    name="variations"
+                    render={({ field }) => (
+                        <FormItem>
+                        <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
+                            <FormControl>
+                            <SelectTrigger className="w-[120px] h-8 bg-transparent border-0 text-white/50 hover:bg-white/10 hover:text-white focus:ring-0">
+                                <SelectValue placeholder="Variations" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {[...Array(4)].map((_, i) => (
+                                <SelectItem key={i + 1} value={String(i + 1)}>
+                                {i + 1} Variation{i > 0 ? 's' : ''}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="aspectRatio"
+                        render={({ field }) => (
+                            <FormItem>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger className="w-[110px] h-8 bg-transparent border-0 text-white/50 hover:bg-white/10 hover:text-white focus:ring-0">
+                                    <SelectValue placeholder="Aspect Ratio" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="16:9">16:9</SelectItem>
+                                    <SelectItem value="1:1">1:1</SelectItem>
+                                    <SelectItem value="9:16">9:16</SelectItem>
+                                    <SelectItem value="4:3">4:3</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            </FormItem>
+                        )}
+                    />
                 </div>
                 <div className="flex items-center gap-2">
                    <Button
@@ -153,32 +197,11 @@ export default function PromptForm({
                 </div>
               </div>
             </div>
-            
-            <FormField
-              control={form.control}
-              name="aspectRatio"
-              render={({ field }) => (
-                <FormItem className="hidden">
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="variations"
-              render={({ field }) => (
-                <FormItem className="hidden">
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
           </form>
         </Form>
       </div>
     </div>
   );
 }
+
+    
