@@ -1,3 +1,4 @@
+
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -14,7 +15,7 @@ interface ImageGridProps {
 
 export default function ImageGrid({ images }: ImageGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 p-4 md:p-8">
       {images.map((image) => (
         <Card
           key={image.id}
