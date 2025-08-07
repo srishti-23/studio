@@ -11,15 +11,15 @@ import AnimatedBackground from "@/components/layout/animated-background";
 
 export default function Home() {
   const images = [
-    { id: 1, src: "https://placehold.co/600x800.png", alt: "Generated ad image 1", hint: "modern architecture" },
-    { id: 2, src: "https://placehold.co/600x800.png", alt: "Generated ad image 2", hint: "geometric patterns" },
-    { id: 3, src: "https://placehold.co/600x800.png", alt: "Generated ad image 3", hint: "cityscape night" },
-    { id: 4, src: "https://placehold.co/600x800.png", alt: "Generated ad image 4", hint: "woman portrait" },
-    { id: 5, src: "https://placehold.co/600x800.png", alt: "Generated ad image 5", hint: "minimalist landscape" },
-    { id: 6, src: "https://placehold.co/600x800.png", alt: "Generated ad image 6", hint: "abstract art" },
-    { id: 7, src: "https://placehold.co/600x800.png", alt: "Generated ad image 7", hint: "laptop technology" },
-    { id: 8, src: "https://placehold.co/600x800.png", alt: "Generated ad image 8", hint: "space nebula" },
-    { id: 9, src: "https://placehold.co/600x800.png", alt: "Generated ad image 9", hint: "vibrant advertisement" },
+    { id: 1, src: "https://placehold.co/600x801.png", alt: "Generated ad image 1", hint: "modern architecture" },
+    { id: 2, src: "https://placehold.co/600x802.png", alt: "Generated ad image 2", hint: "geometric patterns" },
+    { id: 3, src: "https://placehold.co/600x803.png", alt: "Generated ad image 3", hint: "cityscape night" },
+    { id: 4, src: "https://placehold.co/600x804.png", alt: "Generated ad image 4", hint: "woman portrait" },
+    { id: 5, src: "https://placehold.co/600x805.png", alt: "Generated ad image 5", hint: "minimalist landscape" },
+    { id: 6, src: "https://placehold.co/600x806.png", alt: "Generated ad image 6", hint: "abstract art" },
+    { id: 7, src: "https://placehold.co/600x807.png", alt: "Generated ad image 7", hint: "laptop technology" },
+    { id: 8, src: "https://placehold.co/600x808.png", alt: "Generated ad image 8", hint: "space nebula" },
+    { id: 9, src: "https://placehold.co/600x809.png", alt: "Generated ad image 9", hint: "vibrant advertisement" },
   ];
 
   return (
