@@ -1,12 +1,21 @@
 "use client";
 
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Rocket, Plus, Book, LogIn, Menu } from "lucide-react";
+import { Rocket, Plus, Book, LogIn, Menu, User, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Header() {
   const { toggleSidebar } = useSidebar();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // This is a mock login function.
+  // In a real app, this would be handled by your auth provider.
+  const handleLogin = () => setIsLoggedIn(true);
+  const handleLogout = () => setIsLoggedIn(false);
+
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-lg px-4 md:px-6">
       <div className="flex items-center gap-2">
@@ -34,16 +43,31 @@ export default function Header() {
             <Book className="h-4 w-4 mr-2" />
             Library
         </Button>
-         <Button variant="ghost" className="hidden md:inline-flex">
-            <LogIn className="h-4 w-4 mr-2" />
-            Login
-        </Button>
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full hidden md:inline-flex">
-            Sign Up
-        </Button>
-        <Button variant="outline" size="icon" className="md:hidden">
-            <LogIn className="h-5 w-5" />
-            <span className="sr-only">Login</span>
+        
+        {isLoggedIn ? (
+          <Button variant="ghost" onClick={handleLogout} className="hidden md:inline-flex items-center gap-2">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
+            <span>Guest User</span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        ) : (
+          <>
+            <Button variant="ghost" onClick={handleLogin} className="hidden md:inline-flex">
+                <LogIn className="h-4 w-4 mr-2" />
+                Login
+            </Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full hidden md:inline-flex">
+                Sign Up
+            </Button>
+          </>
+        )}
+        
+        <Button variant="outline" size="icon" className="md:hidden" onClick={isLoggedIn ? handleLogout : handleLogin}>
+            {isLoggedIn ? <User className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}
+            <span className="sr-only">{isLoggedIn ? 'Profile' : 'Login'}</span>
         </Button>
       </div>
     </header>

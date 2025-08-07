@@ -1,3 +1,5 @@
+"use client";
+
 import {
   SidebarHeader,
   SidebarContent,
@@ -8,53 +10,66 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarSeparator,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   HelpCircle,
-  LayoutGrid,
-  PenSquare,
-  Shapes,
-  AppWindow,
-  FilePlus2,
+  Plus,
   Search,
-  ChevronDown
+  ChevronDown,
+  X
 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import Image from "next/image";
+import Link from "next/link";
+import { Rocket } from "lucide-react";
 
 export default function AppSidebar() {
+    const { toggleSidebar } = useSidebar();
+
     const historyItems = [
-        { id: 1, text: "A sleek electric car on a futuristic highway", image: "https://placehold.co/40x40.png" },
-        { id: 2, text: "Artisanal coffee beans in a rustic setting", image: "https://placehold.co/40x40.png" },
-        { id: 3, text: "A vibrant abstract painting for a tech startup", image: "https://placehold.co/40x40.png" },
-        { id: 4, text: "Luxury watch with intricate details on a dark background", image: "https://placehold.co/40x40.png" },
+        { id: 1, text: "Futuristic city", image: "https://placehold.co/40x40.png?text=FC", timestamp: "2 hours ago" },
+        { id: 2, text: "Abstract art", image: "https://placehold.co/40x40.png?text=AA", timestamp: "1 day ago" },
     ];
+
   return (
     <>
-      <SidebarHeader className="p-4">
-        <Button variant="outline" className="w-full justify-start">
-            <FilePlus2 className="mr-2 h-4 w-4" />
+      <SidebarHeader className="p-4 border-b border-sidebar-border">
+         <div className="flex items-center justify-between">
+             <Link href="/" className="flex items-center gap-2 font-headline text-lg font-bold">
+              <Rocket className="h-6 w-6 text-primary" />
+              <span className="text-primary">AdFleek.io</span>
+            </Link>
+            <Button variant="ghost" size="icon" onClick={toggleSidebar}>
+                <X className="h-5 w-5" />
+            </Button>
+         </div>
+        <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent">
+            <Plus className="mr-2 h-4 w-4" />
             New Chat
         </Button>
-        <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search..." className="pl-8" />
+        <div className="relative mt-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search history..." className="pl-9 bg-sidebar-accent border-sidebar-border" />
         </div>
       </SidebarHeader>
 
       <SidebarContent className="flex-1 overflow-auto p-0">
         <ScrollArea className="h-full">
-            <SidebarMenu className="gap-0 p-4 pt-0">
+            <SidebarMenu className="gap-0 p-4 pt-4">
             <SidebarGroup>
-                <SidebarGroupLabel>History</SidebarGroupLabel>
+                <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent History</SidebarGroupLabel>
                 {historyItems.map(item => (
-                <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton className="h-auto" size="lg" isActive={false}>
+                <SidebarMenuItem key={item.id} className="mt-2">
+                    <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
                         <Image src={item.image} alt={item.text} width={40} height={40} className="rounded-md" data-ai-hint="advertisement design" />
-                        <span className="truncate text-sm font-normal whitespace-normal">{item.text}</span>
+                        <div className="flex flex-col items-start">
+                            <span className="truncate text-sm font-medium">{item.text}</span>
+                            <span className="text-xs text-muted-foreground">{item.timestamp}</span>
+                        </div>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 ))}
@@ -63,9 +78,14 @@ export default function AppSidebar() {
         </ScrollArea>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 mt-auto">
-        <SidebarSeparator />
+      <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
         <SidebarMenu>
+          <SidebarMenuItem>
+             <SidebarMenuButton>
+                <HelpCircle className="h-4 w-4" />
+                <span>Help</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton>
                 <Avatar className="h-8 w-8">
