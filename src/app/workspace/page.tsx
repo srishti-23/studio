@@ -26,19 +26,12 @@ export default function WorkspacePage({
     <div className="relative flex flex-col min-h-screen">
        <AnimatedBackground />
       <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-lg px-4 md:px-6">
-        <Button variant="outline" asChild className="gap-2">
-            <Link href="/">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Home
-            </Link>
-        </Button>
         <div className="flex-1 flex justify-center">
           <Link href="/" className="flex items-center gap-2 font-headline text-lg font-bold">
               <Rocket className="h-6 w-6" />
               <span className="text-primary">AdFleek.io</span>
           </Link>
         </div>
-        <div className="w-[145px]"></div>
       </header>
       <main className="flex-1 flex flex-col justify-center">
         <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
