@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -34,9 +35,11 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-         <Button variant="ghost" className="hidden md:inline-flex">
-            <Plus className="h-4 w-4 mr-2" />
-            New Chat
+         <Button asChild variant="ghost" className="hidden md:inline-flex">
+            <Link href="/workspace">
+                <Plus className="h-4 w-4 mr-2" />
+                New Chat
+            </Link>
         </Button>
          <Button variant="ghost" className="hidden md:inline-flex">
             <Book className="h-4 w-4 mr-2" />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -47,9 +48,11 @@ export default function AppSidebar() {
                 <X className="h-5 w-5" />
             </Button>
          </div>
-        <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent">
-            <Plus className="mr-2 h-4 w-4" />
-            New Chat
+         <Button asChild variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent">
+            <Link href="/workspace">
+                <Plus className="mr-2 h-4 w-4" />
+                New Chat
+            </Link>
         </Button>
         <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -63,7 +66,7 @@ export default function AppSidebar() {
             <SidebarGroup>
                 <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent History</SidebarGroupLabel>
                 {historyItems.map(item => (
-                <SidebarMenuItem key={item.id} className="mt-2">
+                <SidebarMenuItem key={item.id}>
                     <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
                         <Image src={item.image} alt={item.text} width={40} height={40} className="rounded-md" data-ai-hint="advertisement design" />
                         <div className="flex flex-col items-start">
