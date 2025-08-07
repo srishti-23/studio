@@ -5,11 +5,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  ArrowRight,
-  Image as ImageIcon,
-  SlidersHorizontal,
+  ArrowUp,
+  ImageIcon,
+  Plus,
   Sparkles,
   LoaderCircle,
+  Settings2,
+  ChevronDown,
 } from "lucide-react";
 
 import { generateAd } from "@/lib/actions";
@@ -52,7 +54,10 @@ interface PromptFormProps {
   initialPrompt?: string;
 }
 
-export default function PromptForm({ imageUrls, initialPrompt = "" }: PromptFormProps) {
+export default function PromptForm({
+  imageUrls,
+  initialPrompt = "",
+}: PromptFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRefining, setIsRefining] = useState(false);
   const { toast } = useToast();
@@ -61,8 +66,8 @@ export default function PromptForm({ imageUrls, initialPrompt = "" }: PromptForm
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: initialPrompt,
-      aspectRatio: "1:1",
-      variations: 4,
+      aspectRatio: "16:9",
+      variations: 1,
     },
   });
 
@@ -81,7 +86,7 @@ export default function PromptForm({ imageUrls, initialPrompt = "" }: PromptForm
     try {
       const result = await refinePrompt({
         userPrompt,
-        previousImageUrls: imageUrls.slice(0, 3), // Use first 3 images for context
+        previousImageUrls: imageUrls.slice(0, 3),
       });
       form.setValue("prompt", result.refinedPrompt, { shouldValidate: true });
       toast({
@@ -105,64 +110,52 @@ export default function PromptForm({ imageUrls, initialPrompt = "" }: PromptForm
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-20 flex justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div className="flex justify-center p-4 w-full">
+      <div className="w-full max-w-3xl">
         <Form {...form}>
-          <form
-            action={generateAd}
-            onSubmit={onSubmit}
-            className="relative"
-          >
-            <div className="relative flex items-center rounded-xl border border-white/10 bg-black/30 shadow-2xl shadow-black/40 backdrop-blur-xl">
+          <form action={generateAd} onSubmit={onSubmit} className="relative">
+            <div className="flex gap-2 mb-2">
+                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Keyframe</Button>
+                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Reference</Button>
+                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Modify</Button>
+            </div>
+            <div className="relative flex flex-col gap-4 rounded-xl border border-white/10 bg-black/30 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
               <Textarea
                 {...form.register("prompt")}
-                placeholder="Describe the ad you want to generate..."
-                className="h-14 min-h-14 resize-none self-center border-0 bg-transparent pl-12 pr-36 text-base ring-offset-0 focus-visible:ring-0"
+                placeholder="What do you want to see..."
+                className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-0"
                 rows={1}
               />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                <ImageIcon className="h-5 w-5 text-white/50" />
-              </div>
-              <div className="absolute right-4 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-                        onClick={handleRefinePrompt}
-                        disabled={isRefining}
-                      >
-                        {isRefining ? (
-                          <LoaderCircle className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Sparkles className="h-5 w-5" />
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Refine with AI</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <Button
-                  type="submit"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:scale-110"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <LoaderCircle className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <ArrowRight className="h-5 w-5" />
-                  )}
-                </Button>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
+                        <ImageIcon />
+                    </Button>
+                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
+                        <Plus />
+                    </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                   <Button variant="ghost" size="sm" className="text-white/50">
+                        IMAGE・PHOTON・16:9
+                        <ChevronDown className="w-4 h-4 ml-2" />
+                   </Button>
+                   <Button
+                    type="submit"
+                    size="icon"
+                    className="h-8 w-8 rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:scale-110"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <LoaderCircle className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <ArrowUp className="h-5 w-5" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
+            
             <FormField
               control={form.control}
               name="aspectRatio"
