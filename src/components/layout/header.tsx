@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -60,12 +59,12 @@ export default function Header() {
             </Button>
           </>
         ) : (
-          <>
-            <Button onClick={handleLogin} className="rounded-full">
-                <LogIn className="h-4 w-4 mr-2" />
-                Login / Sign Up
+            <Button asChild className="rounded-full">
+                <Link href="/login">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login / Sign Up
+                </Link>
             </Button>
-          </>
         )}
       </div>
     </header>
