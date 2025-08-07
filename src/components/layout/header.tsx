@@ -1,41 +1,49 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ChevronDown, Share2, MoreHorizontal, BrainCircuit, MessageSquareQuote, Undo2 } from "lucide-react";
+import { Rocket, Plus, Book, LogIn, Menu } from "lucide-react";
 import Link from "next/link";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export default function Header() {
+  const { toggleSidebar } = useSidebar();
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between px-6">
+    <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-lg px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <Link href="/" className="flex items-center gap-3 font-headline text-lg font-bold text-white">
-          <span>COSMIC BUBBLE</span>
-          <ChevronDown className="h-5 w-5" />
+        <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={toggleSidebar}
+        >
+            <Menu className="h-6 w-6" />
+            <span className="sr-only">Toggle Sidebar</span>
+        </Button>
+        <Link href="/" className="flex items-center gap-2 font-headline text-lg font-bold text-white">
+            <Rocket className="h-6 w-6" />
+            <span>AdFleek.io</span>
         </Link>
       </div>
 
       <div className="flex items-center gap-2">
-         <Button variant="ghost" className="text-white/80 hover:bg-white/10 hover:text-white">
-            <Undo2 className="h-4 w-4 mr-2" />
-            Show More
+         <Button variant="ghost" className="hidden md:inline-flex">
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
         </Button>
-         <Button variant="ghost" className="text-white/80 hover:bg-white/10 hover:text-white">
-            <BrainCircuit className="h-4 w-4 mr-2" />
-            Brainstorm
+         <Button variant="ghost" className="hidden md:inline-flex">
+            <Book className="h-4 w-4 mr-2" />
+            Library
         </Button>
-         <Button variant="ghost" className="text-white/80 hover:bg-white/10 hover:text-white">
-            <MessageSquareQuote className="h-4 w-4 mr-2" />
-            Reply
+         <Button variant="ghost" className="hidden md:inline-flex">
+            <LogIn className="h-4 w-4 mr-2" />
+            Login
         </Button>
-         <Button variant="ghost" size="icon" className="text-white/80 hover:bg-white/10 hover:text-white">
-            <MoreHorizontal className="h-4 w-4" />
+        <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full hidden md:inline-flex">
+            Sign Up
         </Button>
-
-        <div className="mx-4 h-6 w-px bg-white/20" />
-
-        <Button className="bg-white text-black hover:bg-white/90 rounded-full">
-            <Share2 className="h-4 w-4 mr-2" />
-          Share
+        <Button variant="outline" size="icon" className="md:hidden">
+            <LogIn className="h-5 w-5" />
+            <span className="sr-only">Login</span>
         </Button>
       </div>
     </header>

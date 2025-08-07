@@ -14,19 +14,19 @@ interface ImageGridProps {
 
 export default function ImageGrid({ images }: ImageGridProps) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {images.map((image) => (
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {images.map((image, index) => (
         <Card
           key={image.id}
-          className="overflow-hidden border-0 bg-transparent shadow-none transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-primary/10"
+          className="overflow-hidden border-border bg-card shadow-lg transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-primary/10 rounded-xl"
         >
           <CardContent className="p-0">
             <Image
               src={image.src}
               alt={image.alt}
               width={600}
-              height={800}
-              className="aspect-[3/4] h-auto w-full object-cover"
+              height={450}
+              className="aspect-video h-auto w-full object-cover"
               data-ai-hint={image.hint}
             />
           </CardContent>

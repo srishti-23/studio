@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Cosmic Bubble",
-  description: "Generate stunning visuals with AI.",
+  title: "AdFleek.io - AI Ad Generation",
+  description: "Generate stunning ad creatives with AI.",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn("font-body antialiased")}>
+      <body className={cn("font-body antialiased min-h-screen")}>
         {children}
         <Toaster />
       </body>

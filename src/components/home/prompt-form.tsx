@@ -111,40 +111,37 @@ export default function PromptForm({
   };
 
   return (
-    <div className="flex justify-center p-4 w-full">
-      <div className="w-full max-w-3xl">
+    <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-transparent">
+      <div className="w-full max-w-3xl mx-auto">
         <Form {...form}>
           <form action={generateAd} onSubmit={onSubmit} className="relative">
-            <div className="flex gap-2 mb-2">
-                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Keyframe</Button>
-                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Reference</Button>
-                <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Modify</Button>
-            </div>
-            <div className="relative flex flex-col gap-4 rounded-xl border border-white/20 bg-neutral-800/50 p-4 shadow-2xl backdrop-blur-lg">
+            <div className="relative flex flex-col gap-4 rounded-xl border border-white/10 bg-black/50 backdrop-blur-xl p-2 shadow-2xl">
               <Textarea
                 {...form.register("prompt")}
                 placeholder="What do you want to see..."
-                className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-0"
+                className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-2"
                 rows={1}
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
-                        <ImageIcon />
-                    </Button>
-                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
-                        <Plus />
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-white/50 hover:bg-white/10 hover:text-white">
+                                    <ImageIcon />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Add Image</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
                 <div className="flex items-center gap-2">
-                   <Button variant="ghost" size="sm" className="text-white/50">
-                        IMAGE・PHOTON・16:9
-                        <ChevronDown className="w-4 h-4 ml-2" />
-                   </Button>
                    <Button
                     type="submit"
                     size="icon"
-                    className="h-8 w-8 rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:scale-110"
+                    className="h-10 w-10 rounded-full bg-primary text-primary-foreground transition-all hover:bg-primary/90 hover:scale-110"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
