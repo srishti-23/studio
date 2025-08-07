@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -119,7 +120,7 @@ export default function PromptForm({
                 <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Reference</Button>
                 <Button variant="outline" size="sm" className="bg-background/50 border-white/20">Modify</Button>
             </div>
-            <div className="relative flex flex-col gap-4 rounded-xl border border-white/10 bg-black/30 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl">
+            <div className="relative flex flex-col gap-4 rounded-xl border border-white/20 bg-neutral-800/50 p-4 shadow-2xl backdrop-blur-lg">
               <Textarea
                 {...form.register("prompt")}
                 placeholder="What do you want to see..."
