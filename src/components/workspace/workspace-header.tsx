@@ -1,20 +1,16 @@
 "use client";
 
-import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Rocket, LogIn, Menu, ChevronDown, User } from "lucide-react";
+import { Rocket, LogIn, Menu, ChevronDown, User, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 
 export default function WorkspaceHeader() {
   const { toggleSidebar } = useSidebar();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // This is a mock login function.
-  // In a real app, this would be handled by your auth provider.
-  const handleLogin = () => setIsLoggedIn(true);
-  const handleLogout = () => setIsLoggedIn(false);
+  const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-lg px-4 md:px-6">
@@ -35,15 +31,31 @@ export default function WorkspaceHeader() {
       </div>
 
       <div className="flex items-center gap-4">
-        {isLoggedIn ? (
-          <Button variant="ghost" onClick={handleLogout} className="flex items-center gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <span className="hidden md:inline">Guest User</span>
-            <ChevronDown className="h-4 w-4 hidden md:inline" />
-          </Button>
+        {user ? (
+           <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name ?? "User"} />
+                  <AvatarFallback>{user.name?.[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuItem className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
           <Button asChild className="rounded-full">
             <Link href="/login">

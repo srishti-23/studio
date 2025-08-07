@@ -6,9 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { LoaderCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   Form,
   FormControl,
@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
+import { useAuth } from "@/hooks/use-auth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -51,6 +52,8 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function AuthForm({ mode }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
+  const { login } = useAuth();
   const isLogin = mode === "login";
   const schema = isLogin ? loginSchema : signupSchema;
 
@@ -63,17 +66,22 @@ export default function AuthForm({ mode }: AuthFormProps) {
     },
   });
 
+  const handleAuthSuccess = (email: string) => {
+    login({ email, name: "Guest User" });
+    router.push("/");
+    toast({
+      title: isLogin ? "Login Successful" : "Signup Successful",
+      description: isLogin ? "Welcome back!" : "Your account has been created.",
+    });
+  };
+
   const onSubmit = (values: z.infer<typeof schema>) => {
     setIsSubmitting(true);
-    console.log(values);
     // Simulate API call
     setTimeout(() => {
       setIsSubmitting(false);
-      toast({
-        title: isLogin ? "Login Successful" : "Signup Successful",
-        description: isLogin ? "Welcome back!" : "Your account has been created.",
-      });
-    }, 2000);
+      handleAuthSuccess(values.email);
+    }, 1000);
   };
   
   const handleGoogleSignIn = () => {
@@ -81,11 +89,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
     // Simulate Google Sign-In
     setTimeout(() => {
         setIsSubmitting(false);
-        toast({
-            title: "Google Sign-In Successful",
-            description: "Welcome!",
-        });
-    }, 1500);
+        handleAuthSuccess("guest.user@google.com");
+    }, 1000);
   };
 
   return (

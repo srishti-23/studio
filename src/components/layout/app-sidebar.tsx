@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -10,7 +9,6 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarSeparator,
   useSidebar
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -20,16 +18,20 @@ import {
   Plus,
   Search,
   ChevronDown,
-  X
+  X,
+  LogOut,
 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import Image from "next/image";
 import Link from "next/link";
 import { Rocket } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 
 export default function AppSidebar() {
     const { toggleSidebar } = useSidebar();
+    const { user, logout } = useAuth();
 
     const historyItems = [
         { id: 1, text: "Futuristic city", image: "https://placehold.co/40x40.png?text=FC", timestamp: "2 hours ago" },
@@ -90,14 +92,35 @@ export default function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton>
-                <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-              <span>Guest User</span>
-              <ChevronDown className="ml-auto h-4 w-4"/>
-            </SidebarMenuButton>
+            {user ? (
+               <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton>
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
+                            <AvatarFallback>{user.name?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span>{user.name}</span>
+                        <ChevronDown className="ml-auto h-4 w-4"/>
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="start" className="w-56">
+                    <DropdownMenuItem onClick={logout}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+            ) : (
+                <SidebarMenuButton asChild>
+                    <Link href="/login">
+                        <Avatar className="h-8 w-8">
+                            <AvatarFallback>U</AvatarFallback>
+                        </Avatar>
+                        <span>Guest User</span>
+                    </Link>
+                </SidebarMenuButton>
+            )}
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

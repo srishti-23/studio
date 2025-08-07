@@ -1,21 +1,17 @@
-
 "use client";
 
-import { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Rocket, Plus, Book, LogIn, Menu, User, ChevronDown } from "lucide-react";
+import { Rocket, Plus, Book, LogIn, Menu, User, ChevronDown, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
+
 
 export default function Header() {
   const { toggleSidebar } = useSidebar();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // This is a mock login function.
-  // In a real app, this would be handled by your auth provider.
-  const handleLogin = () => setIsLoggedIn(true);
-  const handleLogout = () => setIsLoggedIn(false);
+  const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-lg px-4 md:px-6">
@@ -24,6 +20,7 @@ export default function Header() {
             variant="ghost"
             size="icon"
             onClick={toggleSidebar}
+            className="md:hidden"
         >
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Sidebar</span>
@@ -46,21 +43,31 @@ export default function Header() {
             Library
         </Button>
         
-        {isLoggedIn ? (
-          <>
-            <Button variant="ghost" onClick={handleLogout} className="hidden md:inline-flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-              <span>Guest User</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="md:hidden" onClick={handleLogout}>
-              <User className="h-5 w-5" />
-              <span className="sr-only">Profile</span>
-            </Button>
-          </>
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src="https://placehold.co/40x40.png" alt={user.name ?? "User"} />
+                  <AvatarFallback>{user.name?.[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuItem className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={logout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         ) : (
             <Button asChild className="rounded-full">
                 <Link href="/login">
