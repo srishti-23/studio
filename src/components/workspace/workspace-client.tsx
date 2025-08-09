@@ -19,7 +19,7 @@ interface WorkspaceClientProps {
 const WorkspaceSkeleton = () => (
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24 animate-pulse">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-            <div className="lg:col-span-7 xl:col-span-8 flex items-center justify-center">
+            <div className="lg:col-span-7 flex items-center justify-center">
                 <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 flex flex-col">
                     <div className="flex justify-end p-2">
                         <RefreshCw className="h-5 w-5 text-muted-foreground" />
@@ -39,7 +39,7 @@ const WorkspaceSkeleton = () => (
                     </div>
                 </Card>
             </div>
-            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+            <div className="lg:col-span-5 flex flex-col gap-8">
                <Card>
                     <div className="p-6">
                         <Skeleton className="h-6 w-3/4 mb-4" />
@@ -107,7 +107,7 @@ export default function WorkspaceClient({
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         {/* Main Image */}
-        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+        <div className="lg:col-span-7 flex flex-col gap-4">
            <div className="flex justify-between items-center">
                 <h2 className="text-xl font-headline tracking-tight">"{prompt}"</h2>
                 <Button variant="outline" size="sm">
@@ -115,7 +115,7 @@ export default function WorkspaceClient({
                     Regenerate
                 </Button>
             </div>
-          <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 relative group">
+          <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl mx-auto">
             <Image
               src={mainImage}
               alt="Main generated image"
@@ -148,7 +148,7 @@ export default function WorkspaceClient({
         </div>
 
         {/* Side Panel */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+        <div className="lg:col-span-5 flex flex-col gap-8">
           <StepsIndicator currentStep={activeStep} prompt={prompt} />
 
           {/* Variations */}
