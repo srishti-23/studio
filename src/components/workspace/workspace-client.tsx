@@ -22,28 +22,8 @@ interface WorkspaceClientProps {
 const WorkspaceSkeleton = () => (
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24 animate-pulse">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-            <div className="lg:col-span-7 flex items-center justify-center">
-                <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 flex flex-col">
-                    <div className="flex justify-end p-2">
-                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 flex items-center justify-center bg-muted/50">
-                        <LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
-                    </div>
-                    <div className="flex justify-between items-center p-4 bg-card">
-                        <div className="flex gap-2">
-                            <ThumbsUp className="h-5 w-5 text-muted-foreground" />
-                            <ThumbsDown className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex gap-2">
-                            <Copy className="h-5 w-5 text-muted-foreground" />
-                            <Download className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                    </div>
-                </Card>
-            </div>
-            <div className="lg:col-span-5 flex flex-col gap-8">
-               <Card>
+            <div className="lg:col-span-3">
+                 <Card>
                     <div className="p-6">
                         <Skeleton className="h-6 w-3/4 mb-4" />
                         <div className="space-y-4">
@@ -62,15 +42,23 @@ const WorkspaceSkeleton = () => (
                         </div>
                     </div>
                 </Card>
+            </div>
+            <div className="lg:col-span-6 flex items-center justify-center">
+                <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 flex flex-col">
+                    <div className="flex-1 flex items-center justify-center bg-muted/50">
+                        <LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
+                    </div>
+                </Card>
+            </div>
+            <div className="lg:col-span-3 flex flex-col gap-8">
                 <div>
-                    <Skeleton className="h-5 w-1/4 mb-4" />
+                    <Skeleton className="h-5 w-1/2 mb-4" />
                     <div className="grid grid-cols-2 gap-4">
                         <Skeleton className="aspect-square rounded-lg" />
                         <Skeleton className="aspect-square rounded-lg" />
                         <Skeleton className="aspect-square rounded-lg" />
                         <Skeleton className="aspect-square rounded-lg" />
                     </div>
-                    <Skeleton className="h-12 w-full mt-8" />
                 </div>
             </div>
         </div>
@@ -159,8 +147,13 @@ export default function WorkspaceClient({
   return (
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-        {/* Main Image */}
-        <div className="lg:col-span-7 flex flex-col gap-4 items-center">
+        {/* Left Panel: Workflow */}
+        <div className="lg:col-span-3">
+             <StepsIndicator currentStep={activeStep} prompt={prompt} />
+        </div>
+
+        {/* Center Panel: Main Image */}
+        <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-headline tracking-tight">Generated template images on {prompt}</h2>
                 <Button variant="outline" size="sm">
@@ -199,11 +192,8 @@ export default function WorkspaceClient({
           </Card>
         </div>
 
-        {/* Side Panel */}
-        <div className="lg:col-span-5 flex flex-col gap-8">
-          <StepsIndicator currentStep={activeStep} prompt={prompt} />
-
-          {/* Variations */}
+        {/* Right Panel: Variations */}
+        <div className="lg:col-span-3 flex flex-col gap-8">
           <div className="flex-1 flex flex-col">
             <h3 className="text-lg font-headline mb-4">Variations</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -244,5 +234,3 @@ export default function WorkspaceClient({
     </div>
   );
 }
-
-    
