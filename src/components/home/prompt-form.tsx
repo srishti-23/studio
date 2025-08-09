@@ -60,19 +60,6 @@ export default function PromptForm({
     },
   });
 
-  const { setValue, watch } = form;
-  const currentPrompt = watch("prompt");
-
-  useEffect(() => {
-    if (selectedImage && !isSubmitting) {
-        // Prefill prompt for editing, but don't overwrite if user is already typing
-        if(currentPrompt === initialPrompt || currentPrompt === "") {
-            setValue("prompt", "A variation of the selected image, but...");
-        }
-    }
-  }, [selectedImage, isSubmitting, setValue, currentPrompt, initialPrompt]);
-
-
   const onSubmit = (values: FormValues) => {
     onGenerate(values);
     if (!selectedImage) {
