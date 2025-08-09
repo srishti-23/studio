@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -51,7 +52,7 @@ export default function AppSidebar() {
             </Button>
          </div>
          <Button asChild variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent">
-            <Link href="/workspace">
+            <Link href="/">
                 <Plus className="mr-2 h-4 w-4" />
                 New Chat
             </Link>
