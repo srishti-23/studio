@@ -25,7 +25,7 @@ export default function Header() {
             <Menu className="h-6 w-6" />
             <span className="sr-only">Toggle Sidebar</span>
         </Button>
-        <Link href="/" className="flex items-center gap-2 font-headline text-lg font-bold text-white">
+        <Link href="/" className="flex items-center gap-2 font-headline text-lg font-bold text-primary">
             <Rocket className="h-6 w-6" />
             <span>AdFleek.io</span>
         </Link>
