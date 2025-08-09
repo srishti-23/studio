@@ -11,12 +11,17 @@ import ImageGrid from "@/components/home/image-grid";
 import AnimatedBackground from "@/components/layout/animated-background";
 
 export default function Home() {
-    const images = Array.from({ length: 9 }, (_, i) => ({
-        id: i + 1,
-        src: 'https://placehold.co/600x800.png',
-        alt: `Pagoda at night ${i + 1}`,
-        hint: 'pagoda night'
-    }));
+    const images = [
+        { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
+        { id: 2, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 2', hint: 'pagoda night' },
+        { id: 3, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 3', hint: 'pagoda night' },
+        { id: 4, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 4', hint: 'pagoda night' },
+        { id: 5, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 5', hint: 'pagoda night' },
+        { id: 6, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 6', hint: 'pagoda night' },
+        { id: 7, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 7', hint: 'pagoda night' },
+        { id: 8, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 8', hint: 'pagoda night' },
+        { id: 9, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 9', hint: 'pagoda night' },
+    ];
 
   return (
     <SidebarProvider>
