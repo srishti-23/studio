@@ -17,6 +17,7 @@ import WorkspaceClient from "@/components/workspace/workspace-client";
 export default function Home() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showImageGrid, setShowImageGrid] = useState(true);
     const [generationProps, setGenerationProps] = useState({
       prompt: "",
       aspectRatio: "1:1",
@@ -41,6 +42,7 @@ export default function Home() {
         setGenerationProps(data);
         setIsGenerating(true);
         setIsSubmitting(true);
+        setShowImageGrid(false);
     };
     
     const handleGenerationComplete = () => {
@@ -50,6 +52,7 @@ export default function Home() {
     const handleNewChat = () => {
         setIsGenerating(false);
         setIsSubmitting(false);
+        setShowImageGrid(false);
     };
 
   return (
@@ -77,7 +80,7 @@ export default function Home() {
                         Transform your ideas into stunning visuals with our advanced AI image generation technology
                         </p>
                     </div>
-                    <ImageGrid images={initialImages} />
+                    {showImageGrid && <ImageGrid images={initialImages} />}
                 </>
             )}
         </main>
