@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { LoaderCircle } from "lucide-react";
+import { Copy, Download, LoaderCircle, RefreshCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import StepsIndicator from "./steps-indicator";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "../ui/skeleton";
 
 interface WorkspaceClientProps {
   prompt: string;
@@ -14,6 +15,65 @@ interface WorkspaceClientProps {
   variations: number;
   imageUrls: string[];
 }
+
+const WorkspaceSkeleton = () => (
+    <div className="container mx-auto p-4 md:p-8 flex-1 pb-24 animate-pulse">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+            <div className="lg:col-span-7 xl:col-span-8 flex items-center justify-center">
+                <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 flex flex-col">
+                    <div className="flex justify-end p-2">
+                        <RefreshCw className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 flex items-center justify-center bg-muted/50">
+                        <LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
+                    </div>
+                    <div className="flex justify-between items-center p-4 bg-card">
+                        <div className="flex gap-2">
+                            <ThumbsUp className="h-5 w-5 text-muted-foreground" />
+                            <ThumbsDown className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex gap-2">
+                            <Copy className="h-5 w-5 text-muted-foreground" />
+                            <Download className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                    </div>
+                </Card>
+            </div>
+            <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-8">
+               <Card>
+                    <div className="p-6">
+                        <Skeleton className="h-6 w-3/4 mb-4" />
+                        <div className="space-y-4">
+                            <div className="flex gap-4">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-8 w-1/2" />
+                            </div>
+                             <div className="flex gap-4">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-8 w-3/4" />
+                            </div>
+                             <div className="flex gap-4">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <Skeleton className="h-8 w-1/3" />
+                            </div>
+                        </div>
+                    </div>
+                </Card>
+                <div>
+                    <Skeleton className="h-5 w-1/4 mb-4" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <Skeleton className="aspect-square rounded-lg" />
+                        <Skeleton className="aspect-square rounded-lg" />
+                        <Skeleton className="aspect-square rounded-lg" />
+                        <Skeleton className="aspect-square rounded-lg" />
+                    </div>
+                    <Skeleton className="h-12 w-full mt-8" />
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 
 export default function WorkspaceClient({
   prompt,
@@ -28,7 +88,7 @@ export default function WorkspaceClient({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 2000); // Simulate generation time
+    }, 3000); // Simulate generation time
     return () => clearTimeout(timer);
   }, []);
 
@@ -40,23 +100,22 @@ export default function WorkspaceClient({
   }, [isLoading, imageUrls]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full flex-1 text-center p-8">
-        <LoaderCircle className="h-12 w-12 animate-spin text-primary mb-4" />
-        <h2 className="text-2xl font-headline mb-2">Generating your vision...</h2>
-        <p className="max-w-md text-muted-foreground">
-          &quot;{prompt}&quot;
-        </p>
-      </div>
-    );
+    return <WorkspaceSkeleton />;
   }
 
   return (
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         {/* Main Image */}
-        <div className="lg:col-span-7 xl:col-span-8 flex items-center justify-center">
-          <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50">
+        <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-4">
+           <div className="flex justify-between items-center">
+                <h2 className="text-xl font-headline tracking-tight">"{prompt}"</h2>
+                <Button variant="outline" size="sm">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Regenerate
+                </Button>
+            </div>
+          <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 relative group">
             <Image
               src={mainImage}
               alt="Main generated image"
@@ -65,6 +124,26 @@ export default function WorkspaceClient({
               className="object-contain w-full h-full"
               data-ai-hint="advertisement creative"
             />
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div className="flex justify-between items-center">
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                            <ThumbsUp />
+                        </Button>
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                            <ThumbsDown />
+                        </Button>
+                    </div>
+                    <div className="flex gap-2">
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                            <Copy />
+                        </Button>
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                            <Download />
+                        </Button>
+                    </div>
+                </div>
+            </div>
           </Card>
         </div>
 
@@ -99,6 +178,7 @@ export default function WorkspaceClient({
               ))}
             </div>
             <Button className="mt-8 w-full" size="lg">
+              <Download className="mr-2 h-4 w-4" />
               Download Selected Image
             </Button>
           </div>
