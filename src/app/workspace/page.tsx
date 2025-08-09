@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/layout/app-sidebar";
 import WorkspaceHeader from "@/components/workspace/workspace-header";
+import WorkspaceClient from "@/components/workspace/workspace-client";
 
 export const metadata: Metadata = {
   title: 'Workspace - AdFleek.io',
-  description: 'Start a new creation.',
+  description: 'Your creative workspace.',
 };
 
 export default function WorkspacePage({
@@ -24,7 +25,18 @@ export default function WorkspacePage({
     ? searchParams.prompt[0]
     : searchParams.prompt || "";
   
-  const imageUrls: string[] = [];
+  const aspectRatio = Array.isArray(searchParams.aspectRatio)
+    ? searchParams.aspectRatio[0]
+    : searchParams.aspectRatio || "1:1";
+
+  const variations = parseInt(
+    Array.isArray(searchParams.variations)
+      ? searchParams.variations[0]
+      : searchParams.variations || "4",
+    10
+  );
+
+  const imageUrls = Array.from({ length: variations }, (_, i) => `https://placehold.co/1024x1024.png?text=Variation+${i+1}`);
 
   return (
     <SidebarProvider>
@@ -34,17 +46,17 @@ export default function WorkspacePage({
       </Sidebar>
       <SidebarInset className="relative flex flex-col min-h-screen">
         <WorkspaceHeader />
-        <main className="flex-1 flex flex-col justify-center">
-          <Suspense fallback={<div className="flex items-center justify-center h-full">Loading...</div>}>
-              <div className="text-center my-12 md:my-24">
-                  <h1 className="text-5xl md:text-7xl font-bold font-headline tracking-tighter">Create with AI</h1>
-                  <p className="mt-4 max-w-xl mx-auto text-muted-foreground text-lg">
-                      Transform your ideas into stunning visuals.
-                  </p>
-              </div>
+        <main className="flex-1 flex flex-col">
+          <Suspense fallback={<div className="flex items-center justify-center h-full flex-1">Loading...</div>}>
+            <WorkspaceClient 
+              prompt={prompt}
+              aspectRatio={aspectRatio}
+              variations={variations}
+              imageUrls={imageUrls}
+            />
           </Suspense>
         </main>
-        <PromptForm initialPrompt={prompt} imageUrls={imageUrls} />
+        <PromptForm initialPrompt={prompt} imageUrls={[]} />
       </SidebarInset>
     </SidebarProvider>
   );

@@ -52,8 +52,8 @@ export default function PromptForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       prompt: initialPrompt,
-      aspectRatio: "16:9",
-      variations: 1,
+      aspectRatio: "1:1",
+      variations: 4,
     },
   });
 
@@ -100,7 +100,7 @@ export default function PromptForm({
                     render={({ field }) => (
                       <FormItem>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => field.onChange(parseInt(value))}
                           defaultValue={String(field.value)}
                         >
                           <FormControl>

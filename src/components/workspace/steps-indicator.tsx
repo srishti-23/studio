@@ -69,7 +69,6 @@ export default function StepsIndicator({ currentStep, prompt }: StepsIndicatorPr
                     {steps.map((step, index) => (
                         <Step
                             key={step.id}
-                            step={step.id}
                             title={step.title}
                             description={step.id === 1 ? step.description : undefined}
                             isCompleted={currentStep > step.id}
