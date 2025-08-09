@@ -1,6 +1,6 @@
+
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,14 +40,15 @@ interface PromptFormProps {
   imageUrls: string[];
   initialPrompt?: string;
   onGenerate: (data: FormValues) => void;
+  isSubmitting: boolean;
 }
 
 export default function PromptForm({
   imageUrls,
   initialPrompt = "",
-  onGenerate
+  onGenerate,
+  isSubmitting,
 }: PromptFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,7 +60,6 @@ export default function PromptForm({
   });
 
   const onSubmit = (values: FormValues) => {
-    setIsSubmitting(true);
     onGenerate(values);
   };
 

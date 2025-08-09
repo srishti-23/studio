@@ -16,6 +16,7 @@ import WorkspaceClient from "@/components/workspace/workspace-client";
 
 export default function Home() {
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [generationProps, setGenerationProps] = useState({
       prompt: "",
       aspectRatio: "1:1",
@@ -39,6 +40,11 @@ export default function Home() {
     const handleGenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
         setGenerationProps(data);
         setIsGenerating(true);
+        setIsSubmitting(true);
+    };
+    
+    const handleGenerationComplete = () => {
+        setIsSubmitting(false);
     };
 
   return (
@@ -56,6 +62,7 @@ export default function Home() {
                     aspectRatio={generationProps.aspectRatio}
                     variations={generationProps.variations}
                     imageUrls={imageUrls}
+                    onGenerationComplete={handleGenerationComplete}
                 />
             ) : (
                 <>
@@ -69,7 +76,11 @@ export default function Home() {
                 </>
             )}
         </main>
-        <PromptForm imageUrls={initialImages.map(i => i.src)} onGenerate={handleGenerate} />
+        <PromptForm 
+            imageUrls={initialImages.map(i => i.src)} 
+            onGenerate={handleGenerate} 
+            isSubmitting={isSubmitting} 
+        />
       </SidebarInset>
     </SidebarProvider>
   );

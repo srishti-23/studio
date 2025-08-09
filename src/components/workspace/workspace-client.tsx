@@ -17,6 +17,7 @@ interface WorkspaceClientProps {
   aspectRatio: string;
   variations: number;
   imageUrls: string[];
+  onGenerationComplete: () => void;
 }
 
 const WorkspaceSkeleton = () => (
@@ -71,6 +72,7 @@ export default function WorkspaceClient({
   aspectRatio,
   variations,
   imageUrls,
+  onGenerationComplete,
 }: WorkspaceClientProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [mainImage, setMainImage] = useState(imageUrls[0]);
@@ -80,9 +82,10 @@ export default function WorkspaceClient({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
+      onGenerationComplete();
     }, 3000); // Simulate generation time
     return () => clearTimeout(timer);
-  }, []);
+  }, [onGenerationComplete]);
 
   useEffect(() => {
     if (!isLoading) {
@@ -155,7 +158,7 @@ export default function WorkspaceClient({
         {/* Center Panel: Main Image */}
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
-                <h2 className="text-xl font-headline tracking-tight">Generated template images on {prompt}</h2>
+                <h2 className="text-xl font-headline tracking-tight">Generated images for {prompt}</h2>
                 <Button variant="outline" size="sm">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Regenerate
