@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowUp, ImageIcon, LoaderCircle } from "lucide-react";
 
-import { generateAd } from "@/lib/actions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -40,11 +39,13 @@ type FormValues = z.infer<typeof formSchema>;
 interface PromptFormProps {
   imageUrls: string[];
   initialPrompt?: string;
+  onGenerate: (data: FormValues) => void;
 }
 
 export default function PromptForm({
   imageUrls,
   initialPrompt = "",
+  onGenerate
 }: PromptFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,15 +58,16 @@ export default function PromptForm({
     },
   });
 
-  const onSubmit = async () => {
+  const onSubmit = (values: FormValues) => {
     setIsSubmitting(true);
+    onGenerate(values);
   };
 
   return (
     <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/90 to-transparent">
       <div className="w-full max-w-3xl mx-auto">
         <Form {...form}>
-          <form action={generateAd} onSubmit={onSubmit} className="relative">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="relative">
             <div className="relative flex flex-col gap-2 rounded-2xl bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all">
               <Textarea
                 {...form.register("prompt")}

@@ -1,4 +1,4 @@
-import PromptForm from "@/components/home/prompt-form";
+
 import { Suspense } from "react";
 import type { Metadata } from 'next';
 import AnimatedBackground from "@/components/layout/animated-background";
@@ -10,6 +10,7 @@ import {
 import AppSidebar from "@/components/layout/app-sidebar";
 import WorkspaceHeader from "@/components/workspace/workspace-header";
 import WorkspaceClient from "@/components/workspace/workspace-client";
+import PromptForm from "@/components/home/prompt-form";
 
 export const metadata: Metadata = {
   title: 'Workspace - AdFleek.io',
@@ -56,7 +57,7 @@ export default function WorkspacePage({
             />
           </Suspense>
         </main>
-        <PromptForm initialPrompt={prompt} imageUrls={[]} />
+        <PromptForm initialPrompt={prompt} imageUrls={[]} onGenerate={() => {}} />
       </SidebarInset>
     </SidebarProvider>
   );
