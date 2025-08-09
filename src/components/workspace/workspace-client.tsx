@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -109,7 +110,7 @@ export default function WorkspaceClient({
         {/* Main Image */}
         <div className="lg:col-span-7 flex flex-col gap-4">
            <div className="flex justify-between items-center">
-                <h2 className="text-xl font-headline tracking-tight">Generated template images on prompt text</h2>
+                <h2 className="text-xl font-headline tracking-tight">Generated template images on &quot;{prompt}&quot;</h2>
                 <Button variant="outline" size="sm">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Regenerate
