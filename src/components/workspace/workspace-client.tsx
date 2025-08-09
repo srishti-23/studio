@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 interface WorkspaceClientProps {
   prompt: string;
@@ -85,6 +86,7 @@ export default function WorkspaceClient({
   const [isLoading, setIsLoading] = useState(true);
   const [mainImage, setMainImage] = useState(imageUrls[0]);
   const [activeStep, setActiveStep] = useState(2);
+  const { toast } = useToast();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -99,6 +101,40 @@ export default function WorkspaceClient({
       setActiveStep(3);
     }
   }, [isLoading, imageUrls]);
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(mainImage);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${prompt.slice(0, 20)}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+       toast({
+        title: "Image Downloaded",
+        description: "The selected image has been saved to your device.",
+      });
+    } catch (error) {
+      console.error("Failed to download image:", error);
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Could not download the image. Please try again.",
+      });
+    }
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(prompt);
+    toast({
+      title: "Prompt Copied!",
+      description: "The generation prompt has been copied to your clipboard.",
+    });
+  };
 
   if (isLoading) {
     return <WorkspaceSkeleton />;
@@ -136,10 +172,10 @@ export default function WorkspaceClient({
                         </Button>
                     </div>
                     <div className="flex gap-2">
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleCopy}>
                             <Copy />
                         </Button>
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleDownload}>
                             <Download />
                         </Button>
                     </div>
@@ -178,7 +214,7 @@ export default function WorkspaceClient({
                 </Card>
               ))}
             </div>
-            <Button className="mt-8 w-full" size="lg">
+            <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
               <Download className="mr-2 h-4 w-4" />
               Download Selected Image
             </Button>
