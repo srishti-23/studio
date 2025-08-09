@@ -27,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   prompt: z.string().min(5, "Please enter a more descriptive prompt."),
@@ -37,17 +38,17 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface PromptFormProps {
-  imageUrls: string[];
-  initialPrompt?: string;
   onGenerate: (data: FormValues) => void;
   isSubmitting: boolean;
+  selectedImage: string | null;
+  initialPrompt?: string;
 }
 
 export default function PromptForm({
-  imageUrls,
-  initialPrompt = "",
   onGenerate,
   isSubmitting,
+  selectedImage,
+  initialPrompt = "",
 }: PromptFormProps) {
 
   const form = useForm<FormValues>({
@@ -59,8 +60,24 @@ export default function PromptForm({
     },
   });
 
+  const { setValue, watch } = form;
+  const currentPrompt = watch("prompt");
+
+  useEffect(() => {
+    if (selectedImage && !isSubmitting) {
+        // Prefill prompt for editing, but don't overwrite if user is already typing
+        if(currentPrompt === initialPrompt || currentPrompt === "") {
+            setValue("prompt", "A variation of the selected image, but...");
+        }
+    }
+  }, [selectedImage, isSubmitting, setValue, currentPrompt, initialPrompt]);
+
+
   const onSubmit = (values: FormValues) => {
     onGenerate(values);
+    if (!selectedImage) {
+        form.reset({ ...values, prompt: "" });
+    }
   };
 
   return (
@@ -71,7 +88,7 @@ export default function PromptForm({
             <div className="relative flex flex-col gap-2 rounded-2xl bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all">
               <Textarea
                 {...form.register("prompt")}
-                placeholder="Describe what you want to create..."
+                placeholder={selectedImage ? "Describe your edits..." : "Describe what you want to create..."}
                 className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base p-2 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
 
@@ -104,6 +121,7 @@ export default function PromptForm({
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
                           defaultValue={String(field.value)}
+                          disabled={!!selectedImage}
                         >
                           <FormControl>
                             <SelectTrigger

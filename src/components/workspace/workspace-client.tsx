@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Copy, Download, LoaderCircle, RefreshCw, ThumbsDown, ThumbsUp } from "lucide-react";
 import StepsIndicator from "./steps-indicator";
@@ -12,12 +12,19 @@ import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
 
-interface WorkspaceClientProps {
+interface Generation {
+  id: number;
   prompt: string;
   aspectRatio: string;
   variations: number;
   imageUrls: string[];
+  isRefinement: boolean;
+}
+
+interface WorkspaceClientProps {
+  generations: Generation[];
   onGenerationComplete: () => void;
+  onImageSelect: (imageUrl: string) => void;
 }
 
 const WorkspaceSkeleton = () => (
@@ -67,32 +74,43 @@ const WorkspaceSkeleton = () => (
 );
 
 
-export default function WorkspaceClient({
-  prompt,
-  aspectRatio,
-  variations,
-  imageUrls,
-  onGenerationComplete,
-}: WorkspaceClientProps) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [mainImage, setMainImage] = useState(imageUrls[0]);
+const GenerationBlock = ({ 
+    generation, 
+    isLast, 
+    onImageSelect,
+    onGenerationComplete,
+}: { 
+    generation: Generation; 
+    isLast: boolean;
+    onImageSelect: (imageUrl: string) => void;
+    onGenerationComplete: () => void;
+}) => {
+  const [isLoading, setIsLoading] = useState(isLast);
+  const [mainImage, setMainImage] = useState(generation.imageUrls[0]);
   const [activeStep, setActiveStep] = useState(2);
   const { toast } = useToast();
+  const blockRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-      onGenerationComplete();
-    }, 3000); // Simulate generation time
+    let timer: NodeJS.Timeout;
+    if (isLoading) {
+        timer = setTimeout(() => {
+            setIsLoading(false);
+            onGenerationComplete();
+        }, 3000); // Simulate generation time
+    }
     return () => clearTimeout(timer);
-  }, [onGenerationComplete]);
+  }, [isLoading, onGenerationComplete]);
 
   useEffect(() => {
     if (!isLoading) {
-      setMainImage(imageUrls[0]);
+      setMainImage(generation.imageUrls[0]);
       setActiveStep(3);
+      if (isLast && blockRef.current) {
+        blockRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
     }
-  }, [isLoading, imageUrls]);
+  }, [isLoading, generation.imageUrls, isLast]);
 
   const handleDownload = async () => {
     try {
@@ -101,7 +119,7 @@ export default function WorkspaceClient({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${prompt.slice(0, 20)}.png`;
+      link.download = `${generation.prompt.slice(0, 20)}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -121,25 +139,26 @@ export default function WorkspaceClient({
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(prompt);
+    navigator.clipboard.writeText(generation.prompt);
     toast({
       title: "Prompt Copied!",
       description: "The generation prompt has been copied to your clipboard.",
     });
   };
+  
+  const handleSelectAndNotify = (url: string) => {
+    setMainImage(url);
+    onImageSelect(url);
+  };
+
 
   const getAspectRatioClass = (ratio: string) => {
     switch (ratio) {
-      case '16:9':
-        return 'aspect-video';
-      case '1:1':
-        return 'aspect-square';
-      case '9:16':
-        return 'aspect-[9/16]';
-      case '4:3':
-        return 'aspect-[4/3]';
-      default:
-        return 'aspect-square';
+      case '16:9': return 'aspect-video';
+      case '1:1': return 'aspect-square';
+      case '9:16': return 'aspect-[9/16]';
+      case '4:3': return 'aspect-[4/3]';
+      default: return 'aspect-square';
     }
   };
 
@@ -148,23 +167,21 @@ export default function WorkspaceClient({
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 flex-1 pb-24">
+    <div ref={blockRef} className="container mx-auto p-4 md:p-8 flex-1 pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
-        {/* Left Panel: Workflow */}
         <div className="lg:col-span-3">
-             <StepsIndicator currentStep={activeStep} prompt={prompt} />
+             <StepsIndicator currentStep={activeStep} prompt={generation.prompt} />
         </div>
 
-        {/* Center Panel: Main Image */}
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
-                <h2 className="text-xl font-headline tracking-tight">Generated images for {prompt}</h2>
+                <h2 className="text-xl font-headline tracking-tight">{generation.isRefinement ? "Refined image for:" : "Generated images for:"} <span className="text-muted-foreground">{generation.prompt}</span></h2>
                 <Button variant="outline" size="sm">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Regenerate
                 </Button>
             </div>
-          <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(aspectRatio))}>
+          <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(generation.aspectRatio))}>
             <Image
               src={mainImage}
               alt="Main generated image"
@@ -194,46 +211,69 @@ export default function WorkspaceClient({
             </div>
           </Card>
         </div>
-
-        {/* Right Panel: Variations */}
-        <div className="lg:col-span-3 flex flex-col gap-8">
-          <div className="flex-1 flex flex-col">
-            <h3 className="text-lg font-headline mb-4">Variations</h3>
-            <div className="grid grid-cols-2 gap-4">
-              {imageUrls.map((url, index) => (
-                <Card
-                  key={index}
-                  className={cn(
-                    "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
-                    mainImage === url
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "hover:scale-105"
-                  )}
-                  onClick={() => setMainImage(url)}
-                >
-                  <Image
-                    src={url}
-                    alt={`Variation ${index + 1}`}
-                    fill
-                    className="object-cover w-full h-full"
-                    data-ai-hint="product variation"
-                  />
-                  <Badge 
-                    variant="secondary" 
-                    className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
-                  >
-                    {index + 1}
-                  </Badge>
-                </Card>
-              ))}
+        
+        {!generation.isRefinement && (
+            <div className="lg:col-span-3 flex flex-col gap-8">
+              <div className="flex-1 flex flex-col">
+                <h3 className="text-lg font-headline mb-4">Variations</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {generation.imageUrls.map((url, index) => (
+                    <Card
+                      key={index}
+                      className={cn(
+                        "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
+                        mainImage === url
+                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                          : "hover:scale-105"
+                      )}
+                      onClick={() => handleSelectAndNotify(url)}
+                    >
+                      <Image
+                        src={url}
+                        alt={`Variation ${index + 1}`}
+                        fill
+                        className="object-cover w-full h-full"
+                        data-ai-hint="product variation"
+                      />
+                      <Badge 
+                        variant="secondary" 
+                        className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
+                      >
+                        {index + 1}
+                      </Badge>
+                    </Card>
+                  ))}
+                </div>
+                <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Selected Image
+                </Button>
+              </div>
             </div>
-            <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Selected Image
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
+    </div>
+  );
+};
+
+
+export default function WorkspaceClient({
+  generations,
+  onGenerationComplete,
+  onImageSelect,
+}: WorkspaceClientProps) {
+  
+  return (
+    <div className="flex flex-col gap-8">
+      {generations.map((gen, index) => (
+        <GenerationBlock
+          key={gen.id}
+          generation={gen}
+          isLast={index === generations.length - 1}
+          onImageSelect={onImageSelect}
+          onGenerationComplete={onGenerationComplete}
+        />
+      ))}
     </div>
   );
 }

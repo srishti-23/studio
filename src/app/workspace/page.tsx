@@ -39,25 +39,33 @@ export default function WorkspacePage({
 
   const imageUrls = Array.from({ length: variations }, (_, i) => `https://placehold.co/1024x1024.png?text=Variation+${i+1}`);
 
+  const generations = [{
+    id: 1,
+    prompt,
+    aspectRatio,
+    variations,
+    imageUrls,
+    isRefinement: false,
+  }];
+
   return (
     <SidebarProvider>
       <AnimatedBackground />
       <Sidebar side="left" variant="floating" collapsible="offcanvas" className="border-r border-sidebar-border">
-        <AppSidebar />
+        <AppSidebar onNewChat={() => {}}/>
       </Sidebar>
       <SidebarInset className="relative flex flex-col min-h-screen">
         <WorkspaceHeader />
         <main className="flex-1 flex flex-col">
           <Suspense fallback={<div className="flex items-center justify-center h-full flex-1">Loading...</div>}>
             <WorkspaceClient 
-              prompt={prompt}
-              aspectRatio={aspectRatio}
-              variations={variations}
-              imageUrls={imageUrls}
+              generations={generations}
+              onGenerationComplete={() => {}}
+              onImageSelect={() => {}}
             />
           </Suspense>
         </main>
-        <PromptForm initialPrompt={prompt} imageUrls={[]} onGenerate={() => {}} />
+        <PromptForm initialPrompt={prompt} onGenerate={() => {}} isSubmitting={false} selectedImage={null} />
       </SidebarInset>
     </SidebarProvider>
   );

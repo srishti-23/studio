@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -14,15 +14,21 @@ import ImageGrid from "@/components/home/image-grid";
 import AnimatedBackground from "@/components/layout/animated-background";
 import WorkspaceClient from "@/components/workspace/workspace-client";
 
+interface Generation {
+  id: number;
+  prompt: string;
+  aspectRatio: string;
+  variations: number;
+  imageUrls: string[];
+  isRefinement: boolean;
+}
+
 export default function Home() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showImageGrid, setShowImageGrid] = useState(true);
-    const [generationProps, setGenerationProps] = useState({
-      prompt: "",
-      aspectRatio: "1:1",
-      variations: 4,
-    });
+    const [generations, setGenerations] = useState<Generation[]>([]);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -36,24 +42,43 @@ export default function Home() {
         { id: 9, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 9', hint: 'pagoda night' },
     ];
 
-    const imageUrls = Array.from({ length: generationProps.variations }, (_, i) => `https://placehold.co/1024x1024.png?text=Variation+${i+1}`);
-
     const handleGenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
-        setGenerationProps(data);
         setIsGenerating(true);
         setIsSubmitting(true);
         setShowImageGrid(false);
+
+        const isRefinement = selectedImage !== null;
+        const newVariations = isRefinement ? 1 : data.variations;
+        const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
+
+        const newGeneration: Generation = {
+          id: Date.now(),
+          prompt: data.prompt,
+          aspectRatio: data.aspectRatio,
+          variations: newVariations,
+          imageUrls: newImageUrls,
+          isRefinement: isRefinement,
+        };
+        
+        setGenerations(prev => [...prev, newGeneration]);
     };
     
     const handleGenerationComplete = () => {
         setIsSubmitting(false);
+        setSelectedImage(null); // Reset selected image after generation
     };
 
     const handleNewChat = () => {
         setIsGenerating(false);
         setIsSubmitting(false);
         setShowImageGrid(false);
+        setGenerations([]);
+        setSelectedImage(null);
     };
+    
+    const handleImageSelect = (imageUrl: string) => {
+        setSelectedImage(imageUrl);
+    }
 
   return (
     <SidebarProvider>
@@ -66,11 +91,9 @@ export default function Home() {
         <main className="flex-1 px-4 py-8 lg:px-8">
             {isGenerating ? (
                 <WorkspaceClient 
-                    prompt={generationProps.prompt}
-                    aspectRatio={generationProps.aspectRatio}
-                    variations={generationProps.variations}
-                    imageUrls={imageUrls}
+                    generations={generations}
                     onGenerationComplete={handleGenerationComplete}
+                    onImageSelect={handleImageSelect}
                 />
             ) : (
                 <>
@@ -85,9 +108,9 @@ export default function Home() {
             )}
         </main>
         <PromptForm 
-            imageUrls={initialImages.map(i => i.src)} 
             onGenerate={handleGenerate} 
-            isSubmitting={isSubmitting} 
+            isSubmitting={isSubmitting}
+            selectedImage={selectedImage}
         />
       </SidebarInset>
     </SidebarProvider>
