@@ -47,14 +47,19 @@ export default function Home() {
         setIsSubmitting(false);
     };
 
+    const handleNewChat = () => {
+        setIsGenerating(false);
+        setIsSubmitting(false);
+    };
+
   return (
     <SidebarProvider>
        <AnimatedBackground />
       <Sidebar side="left" variant="floating" collapsible="offcanvas" className="border-r border-sidebar-border">
-        <AppSidebar />
+        <AppSidebar onNewChat={handleNewChat} />
       </Sidebar>
       <SidebarInset className="relative flex flex-col min-h-screen">
-        <Header />
+        <Header onNewChat={handleNewChat} />
         <main className="flex-1 px-4 py-8 lg:px-8">
             {isGenerating ? (
                 <WorkspaceClient 

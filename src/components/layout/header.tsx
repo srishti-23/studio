@@ -9,8 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 
+interface HeaderProps {
+  onNewChat: () => void;
+}
 
-export default function Header() {
+export default function Header({ onNewChat }: HeaderProps) {
   const { toggleSidebar } = useSidebar();
   const { user, logout } = useAuth();
 
@@ -32,11 +35,9 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-2">
-         <Button asChild variant="ghost" className="hidden md:inline-flex">
-            <Link href="/">
-                <Plus className="h-4 w-4 mr-2" />
-                New Chat
-            </Link>
+         <Button variant="ghost" className="hidden md:inline-flex" onClick={onNewChat}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Chat
         </Button>
          <Button variant="ghost" className="hidden md:inline-flex">
             <Book className="h-4 w-4 mr-2" />

@@ -30,7 +30,11 @@ import { Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 
-export default function AppSidebar() {
+interface AppSidebarProps {
+  onNewChat: () => void;
+}
+
+export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const { toggleSidebar } = useSidebar();
     const { user, logout } = useAuth();
 
@@ -51,11 +55,9 @@ export default function AppSidebar() {
                 <X className="h-5 w-5" />
             </Button>
          </div>
-         <Button asChild variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent">
-            <Link href="/">
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
-            </Link>
+         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={onNewChat}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Chat
         </Button>
         <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
