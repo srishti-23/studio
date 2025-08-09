@@ -71,7 +71,7 @@ export default function PromptForm({
       <div className="w-full max-w-3xl mx-auto">
         <Form {...form}>
           <form action={generateAd} onSubmit={onSubmit} className="relative">
-            <div className="relative flex flex-col gap-2 rounded-2xl border border-border bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-primary/50">
+            <div className="relative flex flex-col gap-2 rounded-2xl border border-border bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all">
               <Textarea
                 {...form.register("prompt")}
                 placeholder="Describe what you want to create..."
