@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "../ui/badge";
 
 interface WorkspaceClientProps {
   prompt: string;
@@ -136,6 +137,21 @@ export default function WorkspaceClient({
     });
   };
 
+  const getAspectRatioClass = (ratio: string) => {
+    switch (ratio) {
+      case '16:9':
+        return 'aspect-video';
+      case '1:1':
+        return 'aspect-square';
+      case '9:16':
+        return 'aspect-[9/16]';
+      case '4:3':
+        return 'aspect-[4/3]';
+      default:
+        return 'aspect-square';
+    }
+  };
+
   if (isLoading) {
     return <WorkspaceSkeleton />;
   }
@@ -144,20 +160,19 @@ export default function WorkspaceClient({
     <div className="container mx-auto p-4 md:p-8 flex-1 pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         {/* Main Image */}
-        <div className="lg:col-span-7 flex flex-col gap-4">
-           <div className="flex justify-between items-center">
+        <div className="lg:col-span-7 flex flex-col gap-4 items-center">
+           <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-headline tracking-tight">Generated template images on {prompt}</h2>
                 <Button variant="outline" size="sm">
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Regenerate
                 </Button>
             </div>
-          <Card className="w-full aspect-square overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl mx-auto">
+          <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(aspectRatio))}>
             <Image
               src={mainImage}
               alt="Main generated image"
-              width={1024}
-              height={1024}
+              fill
               className="object-contain w-full h-full"
               data-ai-hint="advertisement creative"
             />
@@ -196,7 +211,7 @@ export default function WorkspaceClient({
                 <Card
                   key={index}
                   className={cn(
-                    "aspect-square overflow-hidden cursor-pointer transition-all duration-200",
+                    "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
                     mainImage === url
                       ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                       : "hover:scale-105"
@@ -206,11 +221,16 @@ export default function WorkspaceClient({
                   <Image
                     src={url}
                     alt={`Variation ${index + 1}`}
-                    width={200}
-                    height={200}
+                    fill
                     className="object-cover w-full h-full"
                     data-ai-hint="product variation"
                   />
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
+                  >
+                    {index + 1}
+                  </Badge>
                 </Card>
               ))}
             </div>
@@ -224,3 +244,5 @@ export default function WorkspaceClient({
     </div>
   );
 }
+
+    
