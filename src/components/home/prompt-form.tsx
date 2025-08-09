@@ -75,7 +75,7 @@ export default function PromptForm({
               <Textarea
                 {...form.register("prompt")}
                 placeholder="Describe what you want to create..."
-                className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-2"
+                className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base ring-offset-0 focus-visible:ring-0 p-2 focus:outline-none focus-visible:outline-none"
                 rows={1}
               />
               <div className="flex items-center justify-between">
