@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ArrowUp, ImageIcon, LoaderCircle, X } from "lucide-react";
+import { ArrowUp, Images, LoaderCircle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -163,7 +163,7 @@ export default function PromptForm({
                                      focus:outline-none focus:ring-0 focus:ring-offset-0"
                           onClick={handleImageUploadClick}
                         >
-                          <ImageIcon />
+                          <Images />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
