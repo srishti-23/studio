@@ -261,7 +261,7 @@ const GenerationBlock = ({
         
         <div className="lg:col-span-3 flex flex-col gap-8">
           <div className="flex-1 flex flex-col">
-            <h3 className="text-lg font-headline mb-4">{generation.isRefinement ? "Result" : "Variations"}</h3>
+            <h3 className="text-lg font-headline mb-4">{!generation.isRefinement && "Variations"}</h3>
             <div className={cn("grid gap-4", generation.variations > 1 ? "grid-cols-2" : "grid-cols-1")}>
               {generation.imageUrls.map((url, index) => (
                 <Card
@@ -328,5 +328,7 @@ export default function WorkspaceClient({
     </div>
   );
 }
+
+    
 
     
