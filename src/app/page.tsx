@@ -65,7 +65,7 @@ export default function Home() {
         
         setGenerations(prev => [...prev, newGeneration]);
         setSelectedImage(null); // Reset selected image after starting a new generation/refinement
-        setPromptForRefinement(""); // Clear the prompt for refinement
+        setPromptForRefinement(data.prompt); // Set prompt for next step
     };
     
     const handleGenerationComplete = () => {
@@ -89,7 +89,6 @@ export default function Home() {
     const handleRegenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
         // This is a new generation from a previous prompt, not a refinement of a selected image
         setSelectedImage(null);
-        setPromptForRefinement("");
         handleGenerate(data);
     };
 
@@ -99,6 +98,9 @@ export default function Home() {
       // generations.pop();
       // setGenerations([...generations]);
     };
+    
+    const lastGenerationPrompt = generations.length > 0 ? generations[generations.length - 1].prompt : "";
+    const displayPrompt = promptForRefinement || lastGenerationPrompt;
 
   return (
     <SidebarProvider>
@@ -132,7 +134,7 @@ export default function Home() {
             onGenerate={handleGenerate} 
             isSubmitting={isSubmitting}
             selectedImage={selectedImage}
-            initialPrompt={promptForRefinement}
+            initialPrompt={displayPrompt}
             onCancel={handleCancel}
         />
       </SidebarInset>

@@ -90,7 +90,7 @@ const GenerationBlock = ({
     onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
-  const [mainImage, setMainImage] = useState(generation.imageUrls[0]);
+  const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : (generation.refinedFrom ?? generation.imageUrls[0]));
   const [activeStep, setActiveStep] = useState(2);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
@@ -98,20 +98,23 @@ const GenerationBlock = ({
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isLoading && isLast) {
+    if (isLast) {
       setIsLoading(true);
       setActiveStep(2);
       timer = setTimeout(() => {
         setIsLoading(false);
         onGenerationComplete();
         setActiveStep(3);
+        if (generation.isRefinement) {
+            setMainImage(generation.imageUrls[0])
+        }
       }, 3000); // Simulate generation time
     } else {
         setIsLoading(false);
         setActiveStep(3);
     }
     return () => clearTimeout(timer);
-  }, [isLoading, isLast, onGenerationComplete]);
+  }, [generation, isLast, onGenerationComplete]);
 
   useEffect(() => {
     if (isLast && blockRef.current && !isLoading) {
@@ -201,7 +204,7 @@ const GenerationBlock = ({
     return <WorkspaceSkeleton />;
   }
   
-  const displayImage = generation.isRefinement ? generation.refinedFrom : mainImage;
+  const displayImage = mainImage;
 
   return (
     <div ref={blockRef} className="container mx-auto p-4 md:p-8 flex-1 pb-12">
@@ -213,7 +216,7 @@ const GenerationBlock = ({
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-headline tracking-tight">{generation.isRefinement ? "Refinement of:" : "Generated images for:"} <span className="text-muted-foreground">{generation.prompt}</span></h2>
-                {isLast && (
+                {isLast && !isLoading && (
                     <Button variant="outline" size="sm" onClick={handleRegenerate}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Regenerate
@@ -262,7 +265,7 @@ const GenerationBlock = ({
                   key={index}
                   className={cn(
                     "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
-                    mainImage === url && !generation.isRefinement
+                    mainImage === url
                       ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
                       : "hover:scale-105"
                   )}
@@ -286,7 +289,7 @@ const GenerationBlock = ({
                 </Card>
               ))}
             </div>
-            {isLast && (
+            {isLast && !isLoading && (
               <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Selected Image
