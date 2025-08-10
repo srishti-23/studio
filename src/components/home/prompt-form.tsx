@@ -34,7 +34,7 @@ const formSchema = z.object({
   prompt: z.string().min(5, "Please enter a more descriptive prompt."),
   aspectRatio: z.string(),
   variations: z.coerce.number().min(1).max(8),
-  uploadedImage: z.string().optional(),
+  uploadedImages: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -53,7 +53,7 @@ export default function PromptForm({
   initialPrompt,
 }: PromptFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,6 +61,7 @@ export default function PromptForm({
       prompt: initialPrompt || "",
       aspectRatio: "1:1",
       variations: 4,
+      uploadedImages: [],
     },
   });
 
@@ -80,33 +81,53 @@ export default function PromptForm({
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const dataUri = reader.result as string;
-        setImagePreview(dataUri);
-        form.setValue("uploadedImage", dataUri);
-      };
-      reader.readAsDataURL(file);
+    const files = event.target.files;
+    if (files) {
+        const fileArray = Array.from(files);
+        const newPreviews: string[] = [];
+        let loadedFiles = 0;
+
+        if (fileArray.length === 0) return;
+
+        fileArray.forEach(file => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUri = reader.result as string;
+                newPreviews.push(dataUri);
+                loadedFiles++;
+                if(loadedFiles === fileArray.length) {
+                    const allPreviews = [...imagePreviews, ...newPreviews];
+                    setImagePreviews(allPreviews);
+                    form.setValue("uploadedImages", allPreviews);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
     }
   };
 
-  const clearImage = () => {
-    setImagePreview(null);
-    form.setValue("uploadedImage", undefined);
+  const clearImage = (indexToRemove: number) => {
+    const newPreviews = imagePreviews.filter((_, index) => index !== indexToRemove);
+    setImagePreviews(newPreviews);
+    form.setValue("uploadedImages", newPreviews);
     if(fileInputRef.current) {
         fileInputRef.current.value = "";
     }
   };
+  
+  const clearAllImages = () => {
+    setImagePreviews([]);
+    form.setValue("uploadedImages", []);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  }
 
   const onSubmit = (values: FormValues) => {
     onGenerate(values);
-    // Do not reset the form here. The parent component will handle state changes.
-    // This prevents clearing the prompt box during refinement.
     if (!selectedImage) {
         form.reset({ ...values, prompt: "" });
-        clearImage();
+        clearAllImages();
     }
   };
 
@@ -123,20 +144,24 @@ export default function PromptForm({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative">
             <div className="relative flex flex-col gap-2 rounded-2xl bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all">
-              {imagePreview && (
-                <div className="relative group w-24 h-24 m-2">
-                    <Image src={imagePreview} alt="Image preview" layout="fill" className="rounded-md object-cover" />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100"
-                        onClick={clearImage}
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
-                </div>
-              )}
+                {imagePreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-2">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative group w-24 h-24">
+                          <Image src={preview} alt={`Image preview ${index + 1}`} layout="fill" className="rounded-md object-cover" />
+                          <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100"
+                              onClick={() => clearImage(index)}
+                          >
+                              <X className="h-4 w-4" />
+                          </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               <Textarea
                 {...form.register("prompt")}
                 placeholder={selectedImage ? "Describe your edits..." : "Describe what you want to create..."}
@@ -149,6 +174,7 @@ export default function PromptForm({
                 className="hidden"
                 accept="image/*"
                 onChange={handleFileChange}
+                multiple
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
@@ -167,7 +193,7 @@ export default function PromptForm({
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Add Image</p>
+                        <p>Add Image(s)</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -180,7 +206,7 @@ export default function PromptForm({
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
                           defaultValue={String(field.value)}
-                          disabled={!!selectedImage || !!imagePreview}
+                          disabled={!!selectedImage || imagePreviews.length > 0}
                         >
                           <FormControl>
                             <SelectTrigger
