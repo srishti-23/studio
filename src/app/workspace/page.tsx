@@ -62,6 +62,7 @@ export default function WorkspacePage({
               generations={generations}
               onGenerationComplete={() => {}}
               onImageSelect={() => {}}
+              onRegenerate={() => {}}
             />
           </Suspense>
         </main>

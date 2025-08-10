@@ -79,6 +79,10 @@ export default function Home() {
     const handleImageSelect = (imageUrl: string) => {
         setSelectedImage(imageUrl);
     }
+    
+    const handleRegenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
+        handleGenerate(data);
+    };
 
   return (
     <SidebarProvider>
@@ -94,6 +98,7 @@ export default function Home() {
                     generations={generations}
                     onGenerationComplete={handleGenerationComplete}
                     onImageSelect={handleImageSelect}
+                    onRegenerate={handleRegenerate}
                 />
             ) : (
                 <>

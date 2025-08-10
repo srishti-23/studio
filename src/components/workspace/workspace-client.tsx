@@ -25,6 +25,7 @@ interface WorkspaceClientProps {
   generations: Generation[];
   onGenerationComplete: () => void;
   onImageSelect: (imageUrl: string) => void;
+  onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }
 
 const WorkspaceSkeleton = () => (
@@ -79,17 +80,20 @@ const GenerationBlock = ({
     isLast, 
     onImageSelect,
     onGenerationComplete,
+    onRegenerate,
 }: { 
     generation: Generation; 
     isLast: boolean;
     onImageSelect: (imageUrl: string) => void;
     onGenerationComplete: () => void;
+    onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
   const [mainImage, setMainImage] = useState(generation.imageUrls[0]);
   const [activeStep, setActiveStep] = useState(2);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
+  const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -151,6 +155,18 @@ const GenerationBlock = ({
     onImageSelect(url);
   };
 
+  const handleFeedback = (newFeedback: 'liked' | 'disliked') => {
+    setFeedback(prev => (prev === newFeedback ? null : newFeedback));
+  };
+  
+  const handleRegenerate = () => {
+    onRegenerate({
+        prompt: generation.prompt,
+        aspectRatio: generation.aspectRatio,
+        variations: generation.variations
+    });
+  }
+
 
   const getAspectRatioClass = (ratio: string) => {
     switch (ratio) {
@@ -176,7 +192,7 @@ const GenerationBlock = ({
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
                 <h2 className="text-xl font-headline tracking-tight">{generation.isRefinement ? "Refined image for:" : "Generated images for:"} <span className="text-muted-foreground">{generation.prompt}</span></h2>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleRegenerate}>
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Regenerate
                 </Button>
@@ -192,11 +208,11 @@ const GenerationBlock = ({
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                  <div className="flex justify-between items-center">
                     <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-                            <ThumbsUp />
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('liked')}>
+                            <ThumbsUp className={cn(feedback === 'liked' && "fill-current")} />
                         </Button>
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-                            <ThumbsDown />
+                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('disliked')}>
+                            <ThumbsDown className={cn(feedback === 'disliked' && "fill-current")} />
                         </Button>
                     </div>
                     <div className="flex gap-2">
@@ -261,6 +277,7 @@ export default function WorkspaceClient({
   generations,
   onGenerationComplete,
   onImageSelect,
+  onRegenerate,
 }: WorkspaceClientProps) {
   
   return (
@@ -272,6 +289,7 @@ export default function WorkspaceClient({
           isLast={index === generations.length - 1}
           onImageSelect={onImageSelect}
           onGenerationComplete={onGenerationComplete}
+          onRegenerate={onRegenerate}
         />
       ))}
     </div>
