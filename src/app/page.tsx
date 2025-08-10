@@ -65,7 +65,7 @@ export default function Home() {
     
     const handleGenerationComplete = () => {
         setIsSubmitting(false);
-        setSelectedImage(null); // Reset selected image after generation
+        // Do not reset selected image here to allow for further refinement
     };
 
     const handleNewChat = () => {
