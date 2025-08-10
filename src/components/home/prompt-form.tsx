@@ -101,6 +101,13 @@ export default function PromptForm({
     }
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      form.handleSubmit(onSubmit)();
+    }
+  };
+
   return (
     <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/90 to-transparent">
       <div className="w-full max-w-3xl mx-auto">
@@ -125,6 +132,7 @@ export default function PromptForm({
                 {...form.register("prompt")}
                 placeholder={selectedImage ? "Describe your edits..." : "Describe what you want to create..."}
                 className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base p-2 focus-visible:ring-0 focus-visible:ring-offset-0"
+                onKeyDown={handleKeyDown}
               />
               <input 
                 type="file"
