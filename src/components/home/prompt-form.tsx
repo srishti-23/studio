@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ArrowUp, ImageIcon, LoaderCircle } from "lucide-react";
+import { ArrowUp, ImageIcon, LoaderCircle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,12 +27,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 const formSchema = z.object({
   prompt: z.string().min(5, "Please enter a more descriptive prompt."),
   aspectRatio: z.string(),
   variations: z.coerce.number().min(1).max(8),
+  uploadedImage: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -50,6 +52,8 @@ export default function PromptForm({
   selectedImage,
   initialPrompt = "",
 }: PromptFormProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -60,10 +64,40 @@ export default function PromptForm({
     },
   });
 
+  useEffect(() => {
+    form.setValue("prompt", initialPrompt);
+  }, [initialPrompt, form]);
+
+  const handleImageUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        setImagePreview(dataUri);
+        form.setValue("uploadedImage", dataUri);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    form.setValue("uploadedImage", undefined);
+    if(fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
+
   const onSubmit = (values: FormValues) => {
     onGenerate(values);
     if (!selectedImage) {
         form.reset({ ...values, prompt: "" });
+        clearImage();
     }
   };
 
@@ -73,12 +107,32 @@ export default function PromptForm({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="relative">
             <div className="relative flex flex-col gap-2 rounded-2xl bg-card/80 backdrop-blur-lg p-2 shadow-2xl transition-all">
+              {imagePreview && (
+                <div className="relative group w-24 h-24 m-2">
+                    <Image src={imagePreview} alt="Image preview" layout="fill" className="rounded-md object-cover" />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100"
+                        onClick={clearImage}
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+              )}
               <Textarea
                 {...form.register("prompt")}
                 placeholder={selectedImage ? "Describe your edits..." : "Describe what you want to create..."}
                 className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base p-2 focus-visible:ring-0 focus-visible:ring-offset-0"
               />
-
+              <input 
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+              />
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1">
                   <TooltipProvider>
@@ -90,6 +144,7 @@ export default function PromptForm({
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground 
                                      focus:outline-none focus:ring-0 focus:ring-offset-0"
+                          onClick={handleImageUploadClick}
                         >
                           <ImageIcon />
                         </Button>
@@ -108,7 +163,7 @@ export default function PromptForm({
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
                           defaultValue={String(field.value)}
-                          disabled={!!selectedImage}
+                          disabled={!!selectedImage || !!imagePreview}
                         >
                           <FormControl>
                             <SelectTrigger
