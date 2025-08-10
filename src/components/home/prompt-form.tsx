@@ -68,7 +68,9 @@ export default function PromptForm({
   });
 
   useEffect(() => {
-    form.setValue("prompt", initialPrompt || "");
+    if (initialPrompt !== form.getValues("prompt")) {
+      form.setValue("prompt", initialPrompt || "");
+    }
   }, [initialPrompt, form]);
 
 
