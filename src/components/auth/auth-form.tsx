@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { signup, login as serverLogin } from "@/lib/actions";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -66,31 +67,38 @@ export default function AuthForm({ mode }: AuthFormProps) {
     },
   });
 
-  const handleAuthSuccess = (email: string) => {
-    login({ email, name: "Guest User" });
-    router.push("/");
-    toast({
-      title: isLogin ? "Login Successful" : "Signup Successful",
-      description: isLogin ? "Welcome back!" : "Your account has been created.",
-    });
-  };
-
-  const onSubmit = (values: z.infer<typeof schema>) => {
+  const onSubmit = async (values: z.infer<typeof schema>) => {
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      if (isLogin) {
+        const result = await serverLogin(values as z.infer<typeof loginSchema>);
+        if (result.error) {
+          toast({ variant: "destructive", title: "Login Failed", description: result.error });
+        } else if (result.success && result.user) {
+          login(result.user);
+          router.push("/");
+          toast({ title: "Login Successful", description: "Welcome back!" });
+        }
+      } else {
+        const result = await signup(values as z.infer<typeof signupSchema>);
+        if (result.error) {
+          toast({ variant: "destructive", title: "Signup Failed", description: result.error });
+        } else if (result.success && result.user) {
+          login(result.user);
+          router.push("/");
+          toast({ title: "Signup Successful", description: "Your account has been created." });
+        }
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "An error occurred", description: "Please try again." });
+    } finally {
       setIsSubmitting(false);
-      handleAuthSuccess(values.email);
-    }, 1000);
+    }
   };
   
   const handleGoogleSignIn = () => {
-    setIsSubmitting(true);
-    // Simulate Google Sign-In
-    setTimeout(() => {
-        setIsSubmitting(false);
-        handleAuthSuccess("guest.user@google.com");
-    }, 1000);
+    // This would be implemented with a provider like NextAuth.js or directly with Firebase Auth
+    toast({ title: "Coming Soon!", description: "Google Sign-In is not yet implemented." });
   };
 
   return (
@@ -147,7 +155,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
             </div>
         </div>
         <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
+          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
         </Button>
       </form>
     </Form>
