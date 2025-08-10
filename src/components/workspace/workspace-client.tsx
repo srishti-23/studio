@@ -90,7 +90,7 @@ const GenerationBlock = ({
     onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
-  const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : generation.refinedFrom || generation.imageUrls[0]);
+  const [mainImage, setMainImage] = useState(generation.imageUrls[0]);
   const [activeStep, setActiveStep] = useState(2);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
@@ -98,37 +98,26 @@ const GenerationBlock = ({
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isLoading) {
-        timer = setTimeout(() => {
-            setIsLoading(false);
-            onGenerationComplete();
-        }, 3000); // Simulate generation time
+    if (isLoading && isLast) {
+      setIsLoading(true);
+      setActiveStep(2);
+      timer = setTimeout(() => {
+        setIsLoading(false);
+        onGenerationComplete();
+        setActiveStep(3);
+      }, 3000); // Simulate generation time
+    } else {
+        setIsLoading(false);
+        setActiveStep(3);
     }
     return () => clearTimeout(timer);
-  }, [isLoading, onGenerationComplete]);
+  }, [isLoading, isLast, onGenerationComplete]);
 
   useEffect(() => {
-    if (!isLoading) {
-      setMainImage(generation.imageUrls[0]);
-      setActiveStep(3);
-      if (isLast && blockRef.current) {
-        blockRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
+    if (isLast && blockRef.current && !isLoading) {
+      blockRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
-  }, [isLoading, generation.imageUrls, isLast]);
-
-  useEffect(() => {
-    // If this is a refinement block, the main image should be the one it was refined from.
-    // Otherwise, it should be the first in its own list.
-    if(generation.isRefinement) {
-        setMainImage(generation.imageUrls[0])
-    } else if (generation.refinedFrom) {
-        setMainImage(generation.refinedFrom);
-    } else {
-        setMainImage(generation.imageUrls[0]);
-    }
-  }, [generation]);
-
+  }, [isLast, isLoading]);
 
   const handleDownload = async () => {
     try {
@@ -180,7 +169,9 @@ const GenerationBlock = ({
   
   const handleSelectAndNotify = (url: string) => {
     setMainImage(url);
-    onImageSelect(url, generation.prompt);
+    if(isLast) {
+      onImageSelect(url, generation.prompt);
+    }
   };
 
   const handleFeedback = (newFeedback: 'liked' | 'disliked') => {
@@ -221,11 +212,13 @@ const GenerationBlock = ({
 
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
            <div className="flex justify-between items-center w-full">
-                <h2 className="text-xl font-headline tracking-tight">{generation.isRefinement ? "Refined image for:" : "Generated images for:"} <span className="text-muted-foreground">{generation.prompt}</span></h2>
-                <Button variant="outline" size="sm" onClick={handleRegenerate}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Regenerate
-                </Button>
+                <h2 className="text-xl font-headline tracking-tight">{generation.isRefinement ? "Refinement of:" : "Generated images for:"} <span className="text-muted-foreground">{generation.prompt}</span></h2>
+                {isLast && (
+                    <Button variant="outline" size="sm" onClick={handleRegenerate}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Regenerate
+                    </Button>
+                )}
             </div>
           <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(generation.aspectRatio))}>
             <Image
@@ -235,33 +228,35 @@ const GenerationBlock = ({
               className="object-contain w-full h-full"
               data-ai-hint="advertisement creative"
             />
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <div className="flex justify-between items-center">
-                    <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('liked')}>
-                            <ThumbsUp className={cn(feedback === 'liked' && "fill-current")} />
-                        </Button>
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('disliked')}>
-                            <ThumbsDown className={cn(feedback === 'disliked' && "fill-current")} />
-                        </Button>
-                    </div>
-                    <div className="flex gap-2">
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleCopy}>
-                            <Copy />
-                        </Button>
-                         <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleDownload}>
-                            <Download />
-                        </Button>
+             {isLast && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex justify-between items-center">
+                        <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('liked')}>
+                                <ThumbsUp className={cn(feedback === 'liked' && "fill-current")} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('disliked')}>
+                                <ThumbsDown className={cn(feedback === 'disliked' && "fill-current")} />
+                            </Button>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleCopy}>
+                                <Copy />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleDownload}>
+                                <Download />
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
           </Card>
         </div>
         
         <div className="lg:col-span-3 flex flex-col gap-8">
           <div className="flex-1 flex flex-col">
             <h3 className="text-lg font-headline mb-4">{generation.isRefinement ? "Result" : "Variations"}</h3>
-            <div className={cn("grid gap-4", generation.isRefinement ? "grid-cols-1" : "grid-cols-2")}>
+            <div className={cn("grid gap-4", generation.variations > 1 ? "grid-cols-2" : "grid-cols-1")}>
               {generation.imageUrls.map((url, index) => (
                 <Card
                   key={index}
@@ -280,7 +275,7 @@ const GenerationBlock = ({
                     className="object-cover w-full h-full"
                     data-ai-hint="product variation"
                   />
-                  {!generation.isRefinement && (
+                  {generation.variations > 1 && (
                     <Badge 
                       variant="secondary" 
                       className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
@@ -291,10 +286,12 @@ const GenerationBlock = ({
                 </Card>
               ))}
             </div>
-            <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Selected Image
-            </Button>
+            {isLast && (
+              <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
+                <Download className="mr-2 h-4 w-4" />
+                Download Selected Image
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -325,3 +322,5 @@ export default function WorkspaceClient({
     </div>
   );
 }
+
+    
