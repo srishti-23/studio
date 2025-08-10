@@ -111,7 +111,7 @@ const GenerationBlock = ({
       }, 3000); // Simulate generation time
     } else {
         setIsLoading(false);
-        setActiveStep(3);
+        setActiveStep(4); // All done
     }
     return () => clearTimeout(timer);
   }, [generation, isLast, onGenerationComplete]);
@@ -123,6 +123,7 @@ const GenerationBlock = ({
   }, [isLast, isLoading]);
 
   const handleDownload = async () => {
+    setActiveStep(3);
     try {
       const response = await fetch(mainImage);
       const blob = await response.blob();
@@ -138,6 +139,7 @@ const GenerationBlock = ({
         title: "Image Downloaded",
         description: "The selected image has been saved to your device.",
       });
+      setActiveStep(4);
     } catch (error) {
       console.error("Failed to download image:", error);
       toast({
@@ -145,6 +147,7 @@ const GenerationBlock = ({
         title: "Download Failed",
         description: "Could not download the image. Please try again.",
       });
+      setActiveStep(3); // Revert to download if failed
     }
   };
 
