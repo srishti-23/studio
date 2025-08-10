@@ -147,8 +147,8 @@ export default function PromptForm({
                 {imagePreviews.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-2">
                     {imagePreviews.map((preview, index) => (
-                      <div key={index} className="relative group w-24 h-24">
-                          <Image src={preview} alt={`Image preview ${index + 1}`} layout="fill" className="rounded-md object-cover" />
+                      <div key={index} className="relative group w-28 h-28">
+                          <Image src={preview} alt={`Image preview ${index + 1}`} layout="fill" className="rounded-xl object-cover" />
                           <Button
                               type="button"
                               variant="ghost"
