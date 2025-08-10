@@ -39,9 +39,11 @@ export default function Header({ onNewChat }: HeaderProps) {
             <Plus className="h-4 w-4 mr-2" />
             New Chat
         </Button>
-         <Button variant="ghost" className="hidden md:inline-flex">
-            <Book className="h-4 w-4 mr-2" />
-            Library
+         <Button asChild variant="ghost" className="hidden md:inline-flex">
+            <Link href="/library">
+                <Book className="h-4 w-4 mr-2" />
+                Library
+            </Link>
         </Button>
         
         {user ? (
