@@ -65,6 +65,7 @@ export default function Home() {
         
         setGenerations(prev => [...prev, newGeneration]);
         setSelectedImage(null); // Reset selected image after starting a new generation/refinement
+        setPromptForRefinement(""); // Clear the prompt for refinement
     };
     
     const handleGenerationComplete = () => {
@@ -88,6 +89,7 @@ export default function Home() {
     const handleRegenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
         // This is a new generation from a previous prompt, not a refinement of a selected image
         setSelectedImage(null);
+        setPromptForRefinement("");
         handleGenerate(data);
     };
 

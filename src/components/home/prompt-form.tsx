@@ -68,14 +68,8 @@ export default function PromptForm({
   });
 
   useEffect(() => {
-    if (selectedImage) {
-        // This keeps the prompt box showing the original prompt for refinement
-        form.setValue("prompt", initialPrompt || "");
-    } else {
-        // For new generations, clear the prompt unless one is passed (e.g. from workspace)
-        form.setValue("prompt", initialPrompt || "");
-    }
-  }, [initialPrompt, selectedImage, form]);
+    form.setValue("prompt", initialPrompt || "");
+  }, [initialPrompt, form]);
 
 
   const handleImageUploadClick = () => {
