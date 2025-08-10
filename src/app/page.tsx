@@ -21,6 +21,7 @@ interface Generation {
   variations: number;
   imageUrls: string[];
   isRefinement: boolean;
+  refinedFrom?: string;
 }
 
 export default function Home() {
@@ -29,6 +30,7 @@ export default function Home() {
     const [showImageGrid, setShowImageGrid] = useState(true);
     const [generations, setGenerations] = useState<Generation[]>([]);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
+    const [promptForRefinement, setPromptForRefinement] = useState("");
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -58,14 +60,15 @@ export default function Home() {
           variations: newVariations,
           imageUrls: newImageUrls,
           isRefinement: isRefinement,
+          refinedFrom: isRefinement ? selectedImage : undefined,
         };
         
         setGenerations(prev => [...prev, newGeneration]);
+        setSelectedImage(null); // Reset selected image after starting a new generation/refinement
     };
     
     const handleGenerationComplete = () => {
         setIsSubmitting(false);
-        // Do not reset selected image here to allow for further refinement
     };
 
     const handleNewChat = () => {
@@ -74,13 +77,17 @@ export default function Home() {
         setShowImageGrid(false);
         setGenerations([]);
         setSelectedImage(null);
+        setPromptForRefinement("");
     };
     
-    const handleImageSelect = (imageUrl: string) => {
+    const handleImageSelect = (imageUrl: string, prompt: string) => {
         setSelectedImage(imageUrl);
+        setPromptForRefinement(prompt);
     }
     
     const handleRegenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
+        // This is a new generation from a previous prompt, not a refinement of a selected image
+        setSelectedImage(null);
         handleGenerate(data);
     };
 
@@ -116,6 +123,7 @@ export default function Home() {
             onGenerate={handleGenerate} 
             isSubmitting={isSubmitting}
             selectedImage={selectedImage}
+            initialPrompt={promptForRefinement}
         />
       </SidebarInset>
     </SidebarProvider>

@@ -19,12 +19,13 @@ interface Generation {
   variations: number;
   imageUrls: string[];
   isRefinement: boolean;
+  refinedFrom?: string;
 }
 
 interface WorkspaceClientProps {
   generations: Generation[];
   onGenerationComplete: () => void;
-  onImageSelect: (imageUrl: string) => void;
+  onImageSelect: (imageUrl: string, prompt: string) => void;
   onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }
 
@@ -84,12 +85,12 @@ const GenerationBlock = ({
 }: { 
     generation: Generation; 
     isLast: boolean;
-    onImageSelect: (imageUrl: string) => void;
+    onImageSelect: (imageUrl: string, prompt: string) => void;
     onGenerationComplete: () => void;
     onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
-  const [mainImage, setMainImage] = useState(generation.imageUrls[0]);
+  const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : generation.refinedFrom || generation.imageUrls[0]);
   const [activeStep, setActiveStep] = useState(2);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
@@ -115,6 +116,19 @@ const GenerationBlock = ({
       }
     }
   }, [isLoading, generation.imageUrls, isLast]);
+
+  useEffect(() => {
+    // If this is a refinement block, the main image should be the one it was refined from.
+    // Otherwise, it should be the first in its own list.
+    if(generation.isRefinement) {
+        setMainImage(generation.imageUrls[0])
+    } else if (generation.refinedFrom) {
+        setMainImage(generation.refinedFrom);
+    } else {
+        setMainImage(generation.imageUrls[0]);
+    }
+  }, [generation]);
+
 
   const handleDownload = async () => {
     try {
@@ -144,30 +158,29 @@ const GenerationBlock = ({
 
   const handleCopy = async () => {
     try {
-      const response = await fetch(mainImage);
-      const blob = await response.blob();
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          [blob.type]: blob,
-        }),
-      ]);
-      toast({
-        title: "Image Copied!",
-        description: "The image has been copied to your clipboard.",
-      });
+        if (!mainImage) return;
+        const response = await fetch(mainImage);
+        const blob = await response.blob();
+        await navigator.clipboard.write([
+            new ClipboardItem({ [blob.type]: blob })
+        ]);
+        toast({
+            title: "Image Copied!",
+            description: "The image has been copied to your clipboard.",
+        });
     } catch (error) {
-      console.error("Failed to copy image:", error);
-      toast({
-        variant: "destructive",
-        title: "Copy Failed",
-        description: "Could not copy the image. Your browser might not support this feature.",
-      });
+        console.error("Failed to copy image:", error);
+        toast({
+            variant: "destructive",
+            title: "Copy Failed",
+            description: "Could not copy the image. Your browser might not support this feature.",
+        });
     }
   };
   
   const handleSelectAndNotify = (url: string) => {
     setMainImage(url);
-    onImageSelect(url);
+    onImageSelect(url, generation.prompt);
   };
 
   const handleFeedback = (newFeedback: 'liked' | 'disliked') => {
@@ -193,9 +206,11 @@ const GenerationBlock = ({
     }
   };
 
-  if (isLoading) {
+  if (isLoading && isLast) {
     return <WorkspaceSkeleton />;
   }
+  
+  const displayImage = generation.isRefinement ? generation.refinedFrom : mainImage;
 
   return (
     <div ref={blockRef} className="container mx-auto p-4 md:p-8 flex-1 pb-12">
@@ -214,7 +229,7 @@ const GenerationBlock = ({
             </div>
           <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(generation.aspectRatio))}>
             <Image
-              src={mainImage}
+              src={displayImage!}
               alt="Main generated image"
               fill
               className="object-contain w-full h-full"
@@ -243,45 +258,45 @@ const GenerationBlock = ({
           </Card>
         </div>
         
-        {!generation.isRefinement && (
-            <div className="lg:col-span-3 flex flex-col gap-8">
-              <div className="flex-1 flex flex-col">
-                <h3 className="text-lg font-headline mb-4">Variations</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {generation.imageUrls.map((url, index) => (
-                    <Card
-                      key={index}
-                      className={cn(
-                        "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
-                        mainImage === url
-                          ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                          : "hover:scale-105"
-                      )}
-                      onClick={() => handleSelectAndNotify(url)}
+        <div className="lg:col-span-3 flex flex-col gap-8">
+          <div className="flex-1 flex flex-col">
+            <h3 className="text-lg font-headline mb-4">{generation.isRefinement ? "Result" : "Variations"}</h3>
+            <div className={cn("grid gap-4", generation.isRefinement ? "grid-cols-1" : "grid-cols-2")}>
+              {generation.imageUrls.map((url, index) => (
+                <Card
+                  key={index}
+                  className={cn(
+                    "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
+                    mainImage === url && !generation.isRefinement
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                      : "hover:scale-105"
+                  )}
+                  onClick={() => handleSelectAndNotify(url)}
+                >
+                  <Image
+                    src={url}
+                    alt={`Image ${index + 1}`}
+                    fill
+                    className="object-cover w-full h-full"
+                    data-ai-hint="product variation"
+                  />
+                  {!generation.isRefinement && (
+                    <Badge 
+                      variant="secondary" 
+                      className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
                     >
-                      <Image
-                        src={url}
-                        alt={`Variation ${index + 1}`}
-                        fill
-                        className="object-cover w-full h-full"
-                        data-ai-hint="product variation"
-                      />
-                      <Badge 
-                        variant="secondary" 
-                        className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
-                      >
-                        {index + 1}
-                      </Badge>
-                    </Card>
-                  ))}
-                </div>
-                <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Selected Image
-                </Button>
-              </div>
+                      {index + 1}
+                    </Badge>
+                  )}
+                </Card>
+              ))}
             </div>
-        )}
+            <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Selected Image
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

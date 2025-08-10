@@ -50,7 +50,7 @@ export default function PromptForm({
   onGenerate,
   isSubmitting,
   selectedImage,
-  initialPrompt = "",
+  initialPrompt,
 }: PromptFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -58,15 +58,22 @@ export default function PromptForm({
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      prompt: initialPrompt,
+      prompt: initialPrompt || "",
       aspectRatio: "1:1",
       variations: 4,
     },
   });
 
   useEffect(() => {
-    form.setValue("prompt", initialPrompt);
-  }, [initialPrompt, form]);
+    if (selectedImage) {
+        // This keeps the prompt box showing the original prompt for refinement
+        form.setValue("prompt", initialPrompt || "");
+    } else {
+        // For new generations, clear the prompt unless one is passed (e.g. from workspace)
+        form.setValue("prompt", initialPrompt || "");
+    }
+  }, [initialPrompt, selectedImage, form]);
+
 
   const handleImageUploadClick = () => {
     fileInputRef.current?.click();
@@ -95,6 +102,8 @@ export default function PromptForm({
 
   const onSubmit = (values: FormValues) => {
     onGenerate(values);
+    // Do not reset the form here. The parent component will handle state changes.
+    // This prevents clearing the prompt box during refinement.
     if (!selectedImage) {
         form.reset({ ...values, prompt: "" });
         clearImage();
@@ -205,7 +214,7 @@ export default function PromptForm({
                         >
                           <FormControl>
                             <SelectTrigger
-                              className="w-[110px] h-8 bg-transparent border-none text-muted-foreground 
+                              className="w-[110px] h-10 bg-transparent border-none text-muted-foreground 
                                          hover:bg-accent hover:text-accent-foreground 
                                          focus:outline-none focus:ring-0 focus:ring-offset-0"
                             >
