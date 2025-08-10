@@ -4,7 +4,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { ArrowUp, Images, LoaderCircle, X } from "lucide-react";
+import { ArrowUp, Images, Square, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -44,6 +44,7 @@ interface PromptFormProps {
   isSubmitting: boolean;
   selectedImage: string | null;
   initialPrompt?: string;
+  onCancel: () => void;
 }
 
 export default function PromptForm({
@@ -51,6 +52,7 @@ export default function PromptForm({
   isSubmitting,
   selectedImage,
   initialPrompt,
+  onCancel,
 }: PromptFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -137,6 +139,12 @@ export default function PromptForm({
       form.handleSubmit(onSubmit)();
     }
   };
+  
+  const handleCancelClick = () => {
+    onCancel();
+    form.reset({ ...form.getValues(), prompt: ""});
+    clearAllImages();
+  }
 
   return (
     <div className="sticky bottom-0 left-0 right-0 w-full p-4 bg-gradient-to-t from-background via-background/90 to-transparent">
@@ -167,6 +175,7 @@ export default function PromptForm({
                 placeholder={selectedImage ? "Describe your edits..." : "Describe what you want to create..."}
                 className="h-14 min-h-[auto] resize-none self-center border-0 bg-transparent text-base p-2 focus-visible:ring-0 focus-visible:ring-offset-0"
                 onKeyDown={handleKeyDown}
+                disabled={isSubmitting}
               />
               <input 
                 type="file"
@@ -188,6 +197,7 @@ export default function PromptForm({
                           className="h-8 w-8 text-muted-foreground hover:bg-accent hover:text-accent-foreground 
                                      focus:outline-none focus:ring-0 focus:ring-offset-0"
                           onClick={handleImageUploadClick}
+                          disabled={isSubmitting}
                         >
                           <Images />
                         </Button>
@@ -206,7 +216,7 @@ export default function PromptForm({
                         <Select
                           onValueChange={(value) => field.onChange(parseInt(value))}
                           defaultValue={String(field.value)}
-                          disabled={!!selectedImage || imagePreviews.length > 0}
+                          disabled={!!selectedImage || imagePreviews.length > 0 || isSubmitting}
                         >
                           <FormControl>
                             <SelectTrigger
@@ -237,6 +247,7 @@ export default function PromptForm({
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                           disabled={isSubmitting}
                         >
                           <FormControl>
                             <SelectTrigger
@@ -259,20 +270,29 @@ export default function PromptForm({
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="h-10 w-10 rounded-full bg-primary text-primary-foreground 
-                               transition-all hover:bg-primary/90 hover:scale-110 
-                               focus:outline-none focus:ring-0 focus:ring-offset-0"
-                    disabled={isSubmitting}
-                  >
                     {isSubmitting ? (
-                      <LoaderCircle className="h-5 w-5 animate-spin" />
+                      <Button
+                        type="button"
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground 
+                                   transition-all hover:bg-secondary/90 hover:scale-110 
+                                   focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        onClick={handleCancelClick}
+                      >
+                         <Square className="h-5 w-5 fill-current" />
+                      </Button>
                     ) : (
-                      <ArrowUp className="h-5 w-5" />
+                      <Button
+                        type="submit"
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-primary text-primary-foreground 
+                                   transition-all hover:bg-primary/90 hover:scale-110 
+                                   focus:outline-none focus:ring-0 focus:ring-offset-0"
+                        disabled={isSubmitting}
+                      >
+                        <ArrowUp className="h-5 w-5" />
+                      </Button>
                     )}
-                  </Button>
                 </div>
               </div>
             </div>

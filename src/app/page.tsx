@@ -91,6 +91,13 @@ export default function Home() {
         handleGenerate(data);
     };
 
+    const handleCancel = () => {
+      setIsSubmitting(false);
+      // Optionally remove the last generation if it was just added
+      // generations.pop();
+      // setGenerations([...generations]);
+    };
+
   return (
     <SidebarProvider>
        <AnimatedBackground />
@@ -124,6 +131,7 @@ export default function Home() {
             isSubmitting={isSubmitting}
             selectedImage={selectedImage}
             initialPrompt={promptForRefinement}
+            onCancel={handleCancel}
         />
       </SidebarInset>
     </SidebarProvider>
