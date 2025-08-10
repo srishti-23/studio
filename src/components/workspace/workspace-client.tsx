@@ -142,12 +142,27 @@ const GenerationBlock = ({
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generation.prompt);
-    toast({
-      title: "Prompt Copied!",
-      description: "The generation prompt has been copied to your clipboard.",
-    });
+  const handleCopy = async () => {
+    try {
+      const response = await fetch(mainImage);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          [blob.type]: blob,
+        }),
+      ]);
+      toast({
+        title: "Image Copied!",
+        description: "The image has been copied to your clipboard.",
+      });
+    } catch (error) {
+      console.error("Failed to copy image:", error);
+      toast({
+        variant: "destructive",
+        title: "Copy Failed",
+        description: "Could not copy the image. Your browser might not support this feature.",
+      });
+    }
   };
   
   const handleSelectAndNotify = (url: string) => {
