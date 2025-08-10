@@ -8,6 +8,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   onNewChat: () => void;
@@ -16,6 +17,12 @@ interface HeaderProps {
 export default function Header({ onNewChat }: HeaderProps) {
   const { toggleSidebar } = useSidebar();
   const { user, logout } = useAuth();
+  const router = useRouter();
+  
+  const handleNewChatClick = () => {
+    onNewChat();
+    router.push('/');
+  }
 
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 backdrop-blur-lg px-4 md:px-6">
@@ -35,7 +42,7 @@ export default function Header({ onNewChat }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-         <Button variant="ghost" className="hidden md:inline-flex" onClick={onNewChat}>
+         <Button variant="ghost" className="hidden md:inline-flex" onClick={handleNewChatClick}>
             <Plus className="h-4 w-4 mr-2" />
             New Chat
         </Button>

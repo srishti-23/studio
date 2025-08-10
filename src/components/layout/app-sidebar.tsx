@@ -29,6 +29,7 @@ import Link from "next/link";
 import { Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 
 interface AppSidebarProps {
   onNewChat: () => void;
@@ -37,11 +38,17 @@ interface AppSidebarProps {
 export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const { toggleSidebar } = useSidebar();
     const { user, logout } = useAuth();
+    const router = useRouter();
 
     const historyItems = [
         { id: 1, text: "Futuristic city", image: "https://placehold.co/40x40.png?text=FC", timestamp: "2 hours ago" },
         { id: 2, text: "Abstract art", image: "https://placehold.co/40x40.png?text=AA", timestamp: "1 day ago" },
     ];
+    
+    const handleNewChatClick = () => {
+      onNewChat();
+      router.push('/');
+    }
 
   return (
     <>
@@ -55,7 +62,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                 <X className="h-5 w-5" />
             </Button>
          </div>
-         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={onNewChat}>
+         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={handleNewChatClick}>
             <Plus className="mr-2 h-4 w-4" />
             New Chat
         </Button>
