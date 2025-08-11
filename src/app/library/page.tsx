@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -13,23 +13,50 @@ import {
 import AnimatedBackground from "@/components/layout/animated-background";
 import MasonryGrid from "@/components/library/masonry-grid";
 import { useRouter } from "next/navigation";
+import { getLibraryImages } from "@/lib/actions/library";
+import { useAuth } from "@/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface LibraryImage {
+  id: string;
+  src: string;
+  alt: string;
+}
+
+const LibrarySkeleton = () => (
+    <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4 p-4">
+        {[...Array(9)].map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full rounded-xl" />
+        ))}
+    </div>
+)
+
 
 export default function LibraryPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [images, setImages] = useState<LibraryImage[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+    const { user, isLoading: isAuthLoading } = useAuth();
 
-    const libraryImages = [
-        { id: 1, src: 'https://placehold.co/500x700.png', alt: 'Futuristic city concept' },
-        { id: 2, src: 'https://placehold.co/500x400.png', alt: 'Enchanted forest illustration' },
-        { id: 3, src: 'https://placehold.co/500x800.png', alt: 'Cyberpunk warrior character' },
-        { id: 4, src: 'https://placehold.co/500x500.png', alt: 'Abstract watercolor painting' },
-        { id: 5, src: 'https://placehold.co/500x600.png', alt: 'Steampunk airship design' },
-        { id: 6, src: 'https://placehold.co/500x450.png', alt: 'Minimalist logo concept' },
-        { id: 7, src: 'https://placehold.co/500x750.png', alt: 'Photorealistic portrait' },
-        { id: 8, src: 'https://placehold.co/500x550.png', alt: 'Fantasy landscape with dragons' },
-        { id: 9, src: 'https://placehold.co/500x650.png', alt: 'Vintage car advertisement' },
-    ];
+    useEffect(() => {
+        if (!isAuthLoading && !user) {
+            router.push('/login');
+        }
+    }, [user, isAuthLoading, router]);
     
+    useEffect(() => {
+        if (user) {
+            setIsLoading(true);
+            getLibraryImages().then(result => {
+                if (result.success) {
+                    setImages(result.images.map((img: any) => ({...img, id: img._id})));
+                }
+                setIsLoading(false);
+            });
+        }
+    }, [user]);
+
     const handleGenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
         setIsSubmitting(true);
         const params = new URLSearchParams({
@@ -56,15 +83,16 @@ export default function LibraryPage() {
             <div className="text-center my-12">
                 <h1 className="text-5xl md:text-7xl font-bold font-headline tracking-tighter">Your Creative Library</h1>
                 <p className="mt-4 max-w-xl mx-auto text-muted-foreground text-lg">
-                    A collection of all your generated masterpieces.
+                    A collection of all your downloaded masterpieces.
                 </p>
             </div>
-            <MasonryGrid images={libraryImages} />
+            {isLoading ? <LibrarySkeleton /> : <MasonryGrid images={images} />}
         </main>
         <PromptForm 
             onGenerate={handleGenerate} 
             isSubmitting={isSubmitting}
             selectedImage={null}
+            onCancel={() => {}}
         />
       </SidebarInset>
     </SidebarProvider>

@@ -4,6 +4,7 @@
 import clientPromise from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { ObjectId } from 'mongodb';
 
 const signupSchema = z
   .object({
@@ -39,11 +40,19 @@ export async function signupUser(values: z.infer<typeof signupSchema>) {
 
     const hashedPassword = await bcrypt.hash(values.password, 10);
 
-    await usersCollection.insertOne({
+    const result = await usersCollection.insertOne({
       email: values.email,
       password: hashedPassword,
       createdAt: new Date(),
     });
+    
+    // Create an empty library for the new user
+    const librariesCollection = db.collection('libraries');
+    await librariesCollection.insertOne({
+        userId: result.insertedId,
+        images: []
+    });
+
 
     return { success: true, message: 'Signup successful!' };
   } catch (error) {
@@ -73,9 +82,7 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
       return { success: false, message: 'Invalid email or password.' };
     }
     
-    const { password, _id, ...userWithoutPassword } = user;
-
-    return { success: true, message: 'Login successful!', user: { id: _id.toString(), email: user.email, name: user.email.split('@')[0] } };
+    return { success: true, message: 'Login successful!', user: { id: user._id.toString(), email: user.email, name: user.email.split('@')[0] } };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: 'An unexpected error occurred.' };

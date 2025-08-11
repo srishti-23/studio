@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "../ui/badge";
+import { useAuth } from "@/hooks/use-auth";
+import { addImageToLibrary } from "@/lib/actions/library";
 
 interface Generation {
   id: number;
@@ -95,6 +97,7 @@ const GenerationBlock = ({
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -125,6 +128,10 @@ const GenerationBlock = ({
   const handleDownload = async () => {
     setActiveStep(3);
     try {
+      if (user) {
+        await addImageToLibrary(mainImage);
+      }
+
       const response = await fetch(mainImage);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
