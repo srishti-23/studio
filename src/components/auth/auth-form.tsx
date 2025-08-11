@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
+import { signupUser, loginUser } from "@/lib/actions/auth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -68,23 +70,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const onSubmit = async (values: z.infer<typeof schema>) => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const user = {
-        email: values.email,
-        name: values.email.split('@')[0],
-    };
-    login(user);
-    router.push("/");
-    
-    if(isLogin) {
-        toast({ title: "Login Successful", description: "Welcome back!" });
-    } else {
-        toast({ title: "Signup Successful", description: "Your account has been created." });
+    try {
+        if (isLogin) {
+            const result = await loginUser(values as z.infer<typeof loginSchema>);
+            if (result.success) {
+                toast({ title: "Login Successful", description: "Welcome back!" });
+                login(result.user!);
+                router.push("/");
+            } else {
+                toast({ variant: "destructive", title: "Login Failed", description: result.message });
+            }
+        } else {
+            const result = await signupUser(values as z.infer<typeof signupSchema>);
+            if (result.success) {
+                toast({ title: "Signup Successful", description: "Your account has been created. Please log in." });
+                router.push("/login");
+            } else {
+                toast({ variant: "destructive", title: "Signup Failed", description: result.message });
+            }
+        }
+    } catch (error) {
+         toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred." });
+    } finally {
+        setIsSubmitting(false);
     }
-
-    setIsSubmitting(false);
   };
   
   const handleGoogleSignIn = () => {
