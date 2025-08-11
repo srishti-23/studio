@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from 'next/navigation';
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -14,9 +15,8 @@ import ImageGrid from "@/components/home/image-grid";
 import AnimatedBackground from "@/components/layout/animated-background";
 import WorkspaceClient from "@/components/workspace/workspace-client";
 import { useAuth } from "@/hooks/use-auth";
-import { saveGeneration } from "@/lib/actions/history";
+import { createConversation, addMessageToConversation, getConversationById } from "@/lib/actions/history";
 import { useToast } from "@/hooks/use-toast";
-
 
 interface Generation {
   id: number;
@@ -28,15 +28,42 @@ interface Generation {
   refinedFrom?: string;
 }
 
-export default function Home() {
+function HomePageContent() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const searchParams = useSearchParams();
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showImageGrid, setShowImageGrid] = useState(true);
     const [generations, setGenerations] = useState<Generation[]>([]);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [promptForRefinement, setPromptForRefinement] = useState("");
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const conversationId = searchParams.get('conversationId');
+        if (conversationId) {
+            setIsGenerating(true);
+            setShowImageGrid(false);
+            setActiveConversationId(conversationId);
+            getConversationById(conversationId).then(result => {
+                if (result.success && result.conversation) {
+                    setGenerations(result.conversation.messages);
+                } else {
+                    toast({
+                        variant: "destructive",
+                        title: "Load Error",
+                        description: result.message || "Could not load conversation.",
+                    });
+                    // Reset to new chat state
+                    handleNewChat();
+                }
+            });
+        } else {
+           handleNewChat();
+        }
+    }, [searchParams, toast]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -57,11 +84,9 @@ export default function Home() {
 
         const isRefinement = selectedImage !== null;
         const newVariations = isRefinement ? 1 : data.variations;
-        //TODO: Replace with actual AI generation
         const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
 
-        const newGeneration: Generation = {
-          id: Date.now(),
+        const newGeneration: Omit<Generation, 'id'> = {
           prompt: data.prompt,
           aspectRatio: data.aspectRatio,
           variations: newVariations,
@@ -70,18 +95,27 @@ export default function Home() {
           refinedFrom: isRefinement ? selectedImage : undefined,
         };
         
-        setGenerations(prev => [...prev, newGeneration]);
-        setSelectedImage(null); // Reset selected image after starting a new generation/refinement
-        setPromptForRefinement(data.prompt); // Set prompt for next step
+        setGenerations(prev => [...prev, {...newGeneration, id: Date.now() }]);
+        setSelectedImage(null); 
+        setPromptForRefinement(data.prompt); 
 
         if (user) {
-            const result = await saveGeneration(newGeneration);
+            let result;
+            if (activeConversationId) {
+                result = await addMessageToConversation(activeConversationId, newGeneration);
+            } else {
+                result = await createConversation(newGeneration);
+                if (result.success && result.conversationId) {
+                    setActiveConversationId(result.conversationId);
+                }
+            }
+
             if (!result.success) {
                 toast({
                     variant: "destructive",
                     title: "History Error",
                     description: result.message,
-                })
+                });
             }
         }
     };
@@ -93,10 +127,11 @@ export default function Home() {
     const handleNewChat = () => {
         setIsGenerating(false);
         setIsSubmitting(false);
-        setShowImageGrid(false);
+        setShowImageGrid(true); // show grid on new chat
         setGenerations([]);
         setSelectedImage(null);
         setPromptForRefinement("");
+        setActiveConversationId(null);
     };
     
     const handleImageSelect = (imageUrl: string, prompt: string) => {
@@ -105,16 +140,12 @@ export default function Home() {
     }
     
     const handleRegenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
-        // This is a new generation from a previous prompt, not a refinement of a selected image
         setSelectedImage(null);
         handleGenerate(data);
     };
 
     const handleCancel = () => {
       setIsSubmitting(false);
-      // Optionally remove the last generation if it was just added
-      // generations.pop();
-      // setGenerations([...generations]);
     };
     
     const lastGenerationPrompt = generations.length > 0 ? generations[generations.length - 1].prompt : "";
@@ -158,4 +189,12 @@ export default function Home() {
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+export default function Home() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <HomePageContent />
+        </Suspense>
+    )
 }

@@ -32,15 +32,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getHistory } from "@/lib/actions/history";
+import { getConversations } from "@/lib/actions/history";
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from "../ui/skeleton";
 
-interface HistoryItem {
+interface Conversation {
   _id: string;
-  prompt: string;
-  imageUrls: string[];
+  title: string;
   createdAt: string;
+  messages: { imageUrls: string[] }[];
 }
 
 interface AppSidebarProps {
@@ -51,16 +51,16 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const { toggleSidebar } = useSidebar();
     const { user, logout } = useAuth();
     const router = useRouter();
-    const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
     useEffect(() => {
         if (user) {
             setIsLoadingHistory(true);
-            getHistory()
+            getConversations()
                 .then(result => {
                     if (result.success) {
-                        setHistoryItems(result.history as HistoryItem[]);
+                        setConversations(result.conversations as Conversation[]);
                     }
                 })
                 .finally(() => {
@@ -73,6 +73,10 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
       onNewChat();
       router.push('/');
     }
+
+  const handleConversationClick = (conversationId: string) => {
+    router.push(`/?conversationId=${conversationId}`);
+  };
 
   return (
     <>
@@ -107,20 +111,20 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                     </div>
-                ) : historyItems.length > 0 ? (
-                    historyItems.map(item => (
-                    <SidebarMenuItem key={item._id}>
+                ) : conversations.length > 0 ? (
+                    conversations.map(convo => (
+                    <SidebarMenuItem key={convo._id} onClick={() => handleConversationClick(convo._id)}>
                         <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
-                            {item.imageUrls?.[0] ? (
-                                <Image src={item.imageUrls[0]} alt={item.prompt} width={40} height={40} className="rounded-md bg-muted" data-ai-hint="advertisement design" />
+                            {convo.messages?.[0]?.imageUrls?.[0] ? (
+                                <Image src={convo.messages[0].imageUrls[0]} alt={convo.title} width={40} height={40} className="rounded-md bg-muted" data-ai-hint="advertisement design" />
                             ) : (
                                 <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
                                     <MessageSquare className="w-5 h-5 text-muted-foreground"/>
                                 </div>
                             )}
                             <div className="flex flex-col items-start overflow-hidden">
-                                <span className="truncate text-sm font-medium w-full">{item.prompt}</span>
-                                <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}</span>
+                                <span className="truncate text-sm font-medium w-full">{convo.title}</span>
+                                <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(convo.createdAt), { addSuffix: true })}</span>
                             </div>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
