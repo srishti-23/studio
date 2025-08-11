@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { signup, login as serverLogin } from "@/lib/actions";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -69,31 +68,23 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   const onSubmit = async (values: z.infer<typeof schema>) => {
     setIsSubmitting(true);
-    try {
-      if (isLogin) {
-        const result = await serverLogin(values as z.infer<typeof loginSchema>);
-        if (result.error) {
-          toast({ variant: "destructive", title: "Login Failed", description: result.error });
-        } else if (result.success && result.user) {
-          login(result.user);
-          router.push("/");
-          toast({ title: "Login Successful", description: "Welcome back!" });
-        }
-      } else {
-        const result = await signup(values as z.infer<typeof signupSchema>);
-        if (result.error) {
-          toast({ variant: "destructive", title: "Signup Failed", description: result.error });
-        } else if (result.success && result.user) {
-          login(result.user);
-          router.push("/");
-          toast({ title: "Signup Successful", description: "Your account has been created." });
-        }
-      }
-    } catch (error) {
-      toast({ variant: "destructive", title: "An error occurred", description: "Please try again." });
-    } finally {
-      setIsSubmitting(false);
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const user = {
+        email: values.email,
+        name: values.email.split('@')[0],
+    };
+    login(user);
+    router.push("/");
+    
+    if(isLogin) {
+        toast({ title: "Login Successful", description: "Welcome back!" });
+    } else {
+        toast({ title: "Signup Successful", description: "Your account has been created." });
     }
+
+    setIsSubmitting(false);
   };
   
   const handleGoogleSignIn = () => {
