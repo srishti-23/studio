@@ -20,7 +20,9 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { signupUser, loginUser } from "@/lib/actions/auth";
+import { signupUser, loginUser, findOrCreateUserFromGoogle } from "@/lib/actions/auth";
+import { auth } from "@/lib/firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
@@ -96,9 +98,39 @@ export default function AuthForm({ mode }: AuthFormProps) {
     }
   };
   
-  const handleGoogleSignIn = () => {
-    // This would be implemented with a provider like NextAuth.js or directly with Firebase Auth
-    toast({ title: "Coming Soon!", description: "Google Sign-In is not yet implemented." });
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const { user } = result;
+
+      if (user.email && user.displayName && user.uid) {
+        const dbResult = await findOrCreateUserFromGoogle({
+            email: user.email,
+            name: user.displayName,
+            uid: user.uid,
+        });
+
+        if (dbResult.success) {
+            toast({ title: "Sign-In Successful", description: "Welcome to AdFleek!" });
+            login(dbResult.user!);
+            router.push('/');
+        } else {
+            toast({ variant: "destructive", title: "Sign-In Failed", description: dbResult.message });
+        }
+      } else {
+        toast({ variant: "destructive", title: "Sign-In Failed", description: "Could not retrieve user information from Google." });
+      }
+
+    } catch (error: any) {
+        if (error.code !== 'auth/popup-closed-by-user') {
+            console.error("Google Sign-In error:", error);
+            toast({ variant: "destructive", title: "Sign-In Failed", description: "An unexpected error occurred during Google Sign-In." });
+        }
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (

@@ -4,6 +4,9 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { findOrCreateUserFromGoogle } from '@/lib/actions/auth';
 
 
 interface User {
@@ -27,16 +30,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    try {
-        const storedUser = getCookie('user');
-        if (typeof storedUser === 'string') {
-          setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+        if (firebaseUser) {
+            // User is signed in with Firebase, now check our DB
+            try {
+                const cookieUser = getCookie('user');
+                if (cookieUser && typeof cookieUser === 'string') {
+                    setUser(JSON.parse(cookieUser));
+                } else if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+                     // This handles the case where the cookie is gone but user is still logged into firebase
+                    const result = await findOrCreateUserFromGoogle({
+                        email: firebaseUser.email,
+                        name: firebaseUser.displayName,
+                        uid: firebaseUser.uid,
+                    });
+                    if (result.success && result.user) {
+                        login(result.user);
+                    } else {
+                        await signOut(auth);
+                    }
+                }
+            } catch (e) {
+                 await signOut(auth);
+            }
+        } else {
+            // User is signed out
+            setUser(null);
+            deleteCookie('user');
         }
-    } catch(e) {
-        // ignore parsing errors
-        deleteCookie('user');
-    }
-    setIsLoading(false);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const login = (userData: User) => {
@@ -44,7 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut(auth);
     deleteCookie('user');
     setUser(null);
     router.push('/login');
