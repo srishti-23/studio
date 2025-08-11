@@ -73,9 +73,9 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
       return { success: false, message: 'Invalid email or password.' };
     }
     
-    const { password, ...userWithoutPassword } = user;
+    const { password, _id, ...userWithoutPassword } = user;
 
-    return { success: true, message: 'Login successful!', user: { email: user.email, name: user.email.split('@')[0] } };
+    return { success: true, message: 'Login successful!', user: { id: _id.toString(), email: user.email, name: user.email.split('@')[0] } };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: 'An unexpected error occurred.' };

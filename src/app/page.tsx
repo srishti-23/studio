@@ -13,6 +13,10 @@ import {
 import ImageGrid from "@/components/home/image-grid";
 import AnimatedBackground from "@/components/layout/animated-background";
 import WorkspaceClient from "@/components/workspace/workspace-client";
+import { useAuth } from "@/hooks/use-auth";
+import { saveGeneration } from "@/lib/actions/history";
+import { useToast } from "@/hooks/use-toast";
+
 
 interface Generation {
   id: number;
@@ -25,6 +29,8 @@ interface Generation {
 }
 
 export default function Home() {
+    const { user } = useAuth();
+    const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showImageGrid, setShowImageGrid] = useState(true);
@@ -44,13 +50,14 @@ export default function Home() {
         { id: 9, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 9', hint: 'pagoda night' },
     ];
 
-    const handleGenerate = (data: { prompt: string; aspectRatio: string; variations: number }) => {
+    const handleGenerate = async (data: { prompt: string; aspectRatio: string; variations: number }) => {
         setIsGenerating(true);
         setIsSubmitting(true);
         setShowImageGrid(false);
 
         const isRefinement = selectedImage !== null;
         const newVariations = isRefinement ? 1 : data.variations;
+        //TODO: Replace with actual AI generation
         const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
 
         const newGeneration: Generation = {
@@ -66,6 +73,17 @@ export default function Home() {
         setGenerations(prev => [...prev, newGeneration]);
         setSelectedImage(null); // Reset selected image after starting a new generation/refinement
         setPromptForRefinement(data.prompt); // Set prompt for next step
+
+        if (user) {
+            const result = await saveGeneration(newGeneration);
+            if (!result.success) {
+                toast({
+                    variant: "destructive",
+                    title: "History Error",
+                    description: result.message,
+                })
+            }
+        }
     };
     
     const handleGenerationComplete = () => {

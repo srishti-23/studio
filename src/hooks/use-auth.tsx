@@ -3,8 +3,11 @@
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { setCookie, getCookie, deleteCookie } from 'cookies-next';
+
 
 interface User {
+  id: string;
   email: string;
   name: string;
 }
@@ -25,24 +28,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
+        const storedUser = getCookie('user');
+        if (typeof storedUser === 'string') {
           setUser(JSON.parse(storedUser));
         }
     } catch(e) {
         // ignore parsing errors
-        localStorage.removeItem('user');
+        deleteCookie('user');
     }
     setIsLoading(false);
   }, []);
 
   const login = (userData: User) => {
-    localStorage.setItem('user', JSON.stringify(userData));
+    setCookie('user', JSON.stringify(userData), { maxAge: 60 * 60 * 24 * 7 }); // 7 days
     setUser(userData);
   };
 
   const logout = () => {
-    localStorage.removeItem('user');
+    deleteCookie('user');
     setUser(null);
     router.push('/login');
   };

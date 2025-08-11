@@ -21,6 +21,7 @@ import {
   ChevronDown,
   X,
   LogOut,
+  MessageSquare,
 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
@@ -30,6 +31,17 @@ import { Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getHistory } from "@/lib/actions/history";
+import { formatDistanceToNow } from 'date-fns';
+import { Skeleton } from "../ui/skeleton";
+
+interface HistoryItem {
+  _id: string;
+  prompt: string;
+  imageUrls: string[];
+  createdAt: string;
+}
 
 interface AppSidebarProps {
   onNewChat: () => void;
@@ -39,11 +51,23 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const { toggleSidebar } = useSidebar();
     const { user, logout } = useAuth();
     const router = useRouter();
+    const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-    const historyItems = [
-        { id: 1, text: "Futuristic city", image: "https://placehold.co/40x40.png?text=FC", timestamp: "2 hours ago" },
-        { id: 2, text: "Abstract art", image: "https://placehold.co/40x40.png?text=AA", timestamp: "1 day ago" },
-    ];
+    useEffect(() => {
+        if (user) {
+            setIsLoadingHistory(true);
+            getHistory()
+                .then(result => {
+                    if (result.success) {
+                        setHistoryItems(result.history as HistoryItem[]);
+                    }
+                })
+                .finally(() => {
+                    setIsLoadingHistory(false);
+                });
+        }
+    }, [user]);
     
     const handleNewChatClick = () => {
       onNewChat();
@@ -77,17 +101,33 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
             <SidebarMenu className="gap-0 p-4 pt-4">
             <SidebarGroup>
                 <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent History</SidebarGroupLabel>
-                {historyItems.map(item => (
-                <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
-                        <Image src={item.image} alt={item.text} width={40} height={40} className="rounded-md" data-ai-hint="advertisement design" />
-                        <div className="flex flex-col items-start">
-                            <span className="truncate text-sm font-medium">{item.text}</span>
-                            <span className="text-xs text-muted-foreground">{item.timestamp}</span>
-                        </div>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                ))}
+                {isLoadingHistory ? (
+                    <div className="space-y-4 px-2 mt-2">
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                        <Skeleton className="h-10 w-full" />
+                    </div>
+                ) : historyItems.length > 0 ? (
+                    historyItems.map(item => (
+                    <SidebarMenuItem key={item._id}>
+                        <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
+                            {item.imageUrls?.[0] ? (
+                                <Image src={item.imageUrls[0]} alt={item.prompt} width={40} height={40} className="rounded-md bg-muted" data-ai-hint="advertisement design" />
+                            ) : (
+                                <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
+                                    <MessageSquare className="w-5 h-5 text-muted-foreground"/>
+                                </div>
+                            )}
+                            <div className="flex flex-col items-start overflow-hidden">
+                                <span className="truncate text-sm font-medium w-full">{item.prompt}</span>
+                                <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}</span>
+                            </div>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    ))
+                ) : (
+                    <p className="p-2 text-sm text-muted-foreground">No history yet.</p>
+                )}
             </SidebarGroup>
             </SidebarMenu>
         </ScrollArea>
