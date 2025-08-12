@@ -46,7 +46,7 @@ export default function ResetPasswordPage() {
         return;
     }
 
-    const result = await resetPassword({ ...values, token });
+    const result = await resetPassword({ password: values.password, confirmPassword: values.confirmPassword, token });
 
     if(result.success) {
         toast({ title: "Success!", description: result.message });
