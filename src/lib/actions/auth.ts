@@ -141,7 +141,7 @@ export async function signupUser(values: z.infer<typeof signupSchema>, otp: stri
     if (!user || !user.otp) {
         return { success: false, message: 'Please request an OTP first.' };
     }
-    if (new Date() > user.otpExpires) {
+    if (user.otpExpires && new Date() > user.otpExpires) {
         return { success: false, message: 'OTP has expired. Please request a new one.' };
     }
 
@@ -171,15 +171,19 @@ export async function signupUser(values: z.infer<typeof signupSchema>, otp: stri
     );
     
     const finalUser = await users.findOne({email: values.email});
+
+    if (!finalUser) {
+        return { success: false, message: 'Could not finalize user creation.' };
+    }
     
     // Create an empty library for the new user
     const librariesCollection = db.collection('libraries');
     await librariesCollection.insertOne({
-        userId: finalUser!._id,
+        userId: finalUser._id,
         images: []
     });
 
-    return { success: true, message: 'Signup successful!', user: { id: finalUser!._id.toString(), email: finalUser!.email, name: finalUser!.name }};
+    return { success: true, message: 'Signup successful!', user: { id: finalUser._id.toString(), email: finalUser.email, name: finalUser.name }};
   } catch (error) {
     console.error('Signup error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
@@ -295,7 +299,7 @@ export async function sendPasswordResetLink(email: string) {
                 html: passwordResetTemplate(user.name, resetUrl),
             });
         } else {
-             console.log(`Password reset link (testing): ${resetUrl}`);
+             console.log(`Password reset link (for testing): ${resetUrl}`);
         }
 
         return { success: true, message: "If an account with this email exists, a reset link has been sent." };
@@ -350,3 +354,5 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
         return { success: false, message: "An unexpected error occurred." };
     }
 }
+
+    
