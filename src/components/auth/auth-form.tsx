@@ -99,36 +99,52 @@ export default function AuthForm({ mode }: AuthFormProps) {
   };
   
   const handleGoogleSignIn = async () => {
+    console.log("handleGoogleSignIn triggered");
     setIsSubmitting(true);
     try {
+      console.log("Creating GoogleAuthProvider...");
       const provider = new GoogleAuthProvider();
+      console.log("Calling signInWithPopup...");
       const result = await signInWithPopup(auth, provider);
+      console.log("Google Sign-In successful. Result:", result);
       const { user } = result;
 
       if (user.email && user.displayName && user.uid) {
+        console.log("User object is valid. Calling findOrCreateUserFromGoogle with:", {
+          email: user.email,
+          name: user.displayName,
+          uid: user.uid,
+        });
         const dbResult = await findOrCreateUserFromGoogle({
             email: user.email,
             name: user.displayName,
             uid: user.uid,
         });
+        console.log("Database result:", dbResult);
 
         if (dbResult.success && dbResult.user) {
+            console.log("Database operation successful. Logging in user...");
             login(dbResult.user);
             toast({ title: "Login Successful", description: `Welcome, ${dbResult.user.name}!` });
             router.push('/');
         } else {
+            console.error("Database operation failed:", dbResult.message);
             toast({ variant: "destructive", title: "Sign-In Failed", description: dbResult.message });
         }
       } else {
+        console.error("Could not retrieve all required user information from Google.", user);
         toast({ variant: "destructive", title: "Sign-In Failed", description: "Could not retrieve user information from Google." });
       }
 
     } catch (error: any) {
         if (error.code !== 'auth/popup-closed-by-user') {
             console.error("Google Sign-In error:", error);
-            toast({ variant: "destructive", title: "Sign-In Failed", description: "An unexpected error occurred during Google Sign-In." });
+            toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
+        } else {
+            console.log("Google Sign-In popup closed by user.");
         }
     } finally {
+        console.log("handleGoogleSignIn finished.");
         setIsSubmitting(false);
     }
   };
