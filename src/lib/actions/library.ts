@@ -1,3 +1,4 @@
+
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -20,7 +21,7 @@ function getAuthUser() {
 
 export async function addImageToLibrary(imageUrl: string) {
     const user = getAuthUser();
-    // if (!user) return { success: false, message: 'User not authenticated.' };
+    if (!user) return { success: false, message: 'User not authenticated.' };
     
     if (!imageUrl) return { success: false, message: 'Image URL is required.' };
 
@@ -29,11 +30,8 @@ export async function addImageToLibrary(imageUrl: string) {
         const db = client.db("adfleek");
         const librariesCollection = db.collection('libraries');
 
-        // Since we are removing auth, we need a single document to update. We can use a static ID.
-        const staticLibraryId = "60c72b9f9b1d8e001f8e8b8a"; // A random but consistent ObjectId
-
         await librariesCollection.updateOne(
-            { _id: new ObjectId(staticLibraryId) },
+            { userId: new ObjectId(user.id) },
             {
                 $push: {
                     images: {
@@ -46,7 +44,7 @@ export async function addImageToLibrary(imageUrl: string) {
                         $position: 0 
                     }
                 },
-                $setOnInsert: { _id: new ObjectId(staticLibraryId) }
+                $setOnInsert: { userId: new ObjectId(user.id) }
             },
             { upsert: true }
         );
@@ -61,17 +59,14 @@ export async function addImageToLibrary(imageUrl: string) {
 
 export async function getLibraryImages() {
     const user = getAuthUser();
-    // if (!user) return { success: false, message: 'User not authenticated.', images: [] };
+    if (!user) return { success: false, message: 'User not authenticated.', images: [] };
 
     try {
         const client = await clientPromise;
         const db = client.db("adfleek");
         const librariesCollection = db.collection('libraries');
         
-        // Since we are removing auth, we fetch the single shared library.
-        const staticLibraryId = "60c72b9f9b1d8e001f8e8b8a";
-
-        const library = await librariesCollection.findOne({ _id: new ObjectId(staticLibraryId) });
+        const library = await librariesCollection.findOne({ userId: new ObjectId(user.id) });
 
         if (!library || !library.images) {
             return { success: true, images: [] };
