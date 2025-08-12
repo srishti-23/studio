@@ -7,11 +7,11 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { LoaderCircle, Rocket } from 'lucide-react';
+import { LoaderCircle, Rocket, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { resetPassword } from '@/lib/actions/auth';
 
@@ -60,28 +60,24 @@ export default function ResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
-        <Link href="/" className="flex items-center justify-center mb-8 gap-2 font-headline text-2xl font-bold">
-            <Rocket className="h-8 w-8 text-primary" />
-            <span className="text-primary">AdFleek.io</span>
-        </Link>
-        <Card className="shadow-2xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Set New Password</CardTitle>
-            <CardDescription>
-              Choose a new strong password for your account.
+        <Card className="bg-card border-border shadow-2xl rounded-lg">
+          <CardHeader className="text-left">
+            <CardTitle className="text-3xl font-bold">Choose new password</CardTitle>
+            <CardDescription className="text-muted-foreground pt-2">
+              Almost done. Enter your new password and you're all set.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>New Password</FormLabel>
+                    <FormLabel>New Password <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="Enter Password" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -92,20 +88,26 @@ export default function ResetPasswordPage() {
                 name="confirmPassword"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>Confirm New Password</FormLabel>
+                    <FormLabel>Confirm New Password <span className="text-destructive">*</span></FormLabel>
                     <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} />
+                        <Input type="password" placeholder="Confirm Password" {...field} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}
                 />
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-base font-bold py-6" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Reset Password"}
                 </Button>
             </form>
             </Form>
           </CardContent>
+           <CardFooter>
+            <Link href="/login" className="flex items-center gap-2 text-foreground hover:text-primary">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back To Login</span>
+            </Link>
+          </CardFooter>
         </Card>
       </div>
     </div>
