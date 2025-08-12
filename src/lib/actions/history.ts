@@ -22,7 +22,18 @@ export async function createConversation(firstMessage: Omit<z.infer<typeof messa
     const cookieStore = cookies();
     const userCookie = cookieStore.get('user');
     if (!userCookie) return { success: false, message: 'User not authenticated.' };
-    const user = JSON.parse(userCookie.value);
+    
+    let user;
+    try {
+        user = JSON.parse(userCookie.value);
+    } catch (e) {
+        return { success: false, message: 'Invalid user session.' };
+    }
+
+    if (!user || !user.id) {
+        return { success: false, message: 'User not authenticated.' };
+    }
+
 
     try {
         const client = await clientPromise;
@@ -30,7 +41,7 @@ export async function createConversation(firstMessage: Omit<z.infer<typeof messa
         const conversationsCollection = db.collection('conversations');
 
         const newConversation = {
-            userId: user.id,
+            userId: user.id, // Use string ID directly
             title: firstMessage.prompt,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -53,6 +64,17 @@ export async function addMessageToConversation(conversationId: string, message: 
     const userCookie = cookieStore.get('user');
     if (!userCookie) return { success: false, message: 'User not authenticated.' };
 
+    let user;
+    try {
+        user = JSON.parse(userCookie.value);
+    } catch (e) {
+        return { success: false, message: 'Invalid user session.' };
+    }
+    
+    if (!user || !user.id) {
+        return { success: false, message: 'User not authenticated.' };
+    }
+
     try {
         const client = await clientPromise;
         const db = client.db("adfleek");
@@ -60,13 +82,18 @@ export async function addMessageToConversation(conversationId: string, message: 
 
         const newMessage = { ...message, id: Date.now(), createdAt: new Date() };
 
-        await conversationsCollection.updateOne(
-            { _id: new ObjectId(conversationId) },
+        // Ensure the conversation belongs to the user before updating
+        const result = await conversationsCollection.updateOne(
+            { _id: new ObjectId(conversationId), userId: user.id },
             { 
                 $push: { messages: newMessage },
                 $set: { updatedAt: new Date() }
             }
         );
+
+        if (result.matchedCount === 0) {
+            return { success: false, message: 'Conversation not found or access denied.' };
+        }
         
         revalidatePath('/');
         return { success: true, message: 'Message added.' };
@@ -81,8 +108,18 @@ export async function getConversations() {
     const userCookie = cookieStore.get('user');
     if (!userCookie) return { success: false, message: 'User not authenticated.', conversations: [] };
 
+    let user;
     try {
-        const user = JSON.parse(userCookie.value);
+        user = JSON.parse(userCookie.value);
+    } catch (e) {
+        return { success: false, message: 'Invalid user session.', conversations: [] };
+    }
+
+    if (!user || !user.id) {
+        return { success: false, message: 'User not authenticated.', conversations: [] };
+    }
+
+    try {
         const client = await clientPromise;
         const db = client.db("adfleek");
         const conversationsCollection = db.collection('conversations');
@@ -104,7 +141,16 @@ export async function getConversationById(conversationId: string) {
     const userCookie = cookieStore.get('user');
     if (!userCookie) return { success: false, message: 'User not authenticated.' };
     
-    const user = JSON.parse(userCookie.value);
+    let user;
+    try {
+        user = JSON.parse(userCookie.value);
+    } catch (e) {
+        return { success: false, message: 'Invalid user session.' };
+    }
+
+    if (!user || !user.id) {
+        return { success: false, message: 'User not authenticated.' };
+    }
 
     try {
         const client = await clientPromise;
