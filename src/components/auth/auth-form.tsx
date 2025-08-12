@@ -241,87 +241,85 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
   // Signup form
   return (
-    <div>
-        {signupStep === 'details' ? (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSignupDetailsSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your Name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="name@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Verify Email"}
-              </Button>
-            </form>
-          </Form>
-        ) : (
-          <div className="space-y-6 text-center">
-            <div>
-              <FormLabel>Enter OTP</FormLabel>
-              <p className="text-sm text-muted-foreground">An OTP was sent to {signupData?.email}</p>
-            </div>
-            <OtpInput value={otp} onChange={setOtp} />
-            <Button className="w-full" onClick={handleOtpSubmit} disabled={isSubmitting || otp.length < 6}>
-              {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Create Account"}
+    <Form {...form}>
+      {signupStep === 'details' ? (
+          <form onSubmit={form.handleSubmit(handleSignupDetailsSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="name@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••••" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Verify Email"}
             </Button>
-            <div className="text-sm text-muted-foreground">
-              Didn't receive the code?{' '}
-              <button
-                onClick={handleResendOtp}
-                disabled={resendCooldown > 0 || isSubmitting}
-                className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground"
-              >
-                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
-              </button>
-            </div>
-            <Button variant="link" onClick={() => setSignupStep('details')}>Back</Button>
+          </form>
+      ) : (
+        <div className="space-y-6 text-center">
+          <div>
+            <FormLabel>Enter OTP</FormLabel>
+            <p className="text-sm text-muted-foreground">An OTP was sent to {signupData?.email}</p>
           </div>
-        )}
-
-        <div className="relative mt-6">
-            <Separator className="absolute top-1/2 -translate-y-1/2" />
-            <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or</span>
-            </div>
+          <OtpInput value={otp} onChange={setOtp} />
+          <Button className="w-full" onClick={handleOtpSubmit} disabled={isSubmitting || otp.length < 6}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Create Account"}
+          </Button>
+          <div className="text-sm text-muted-foreground">
+            Didn't receive the code?{' '}
+            <button
+              onClick={handleResendOtp}
+              disabled={resendCooldown > 0 || isSubmitting}
+              className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground"
+            >
+              {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+            </button>
+          </div>
+          <Button variant="link" onClick={() => setSignupStep('details')}>Back</Button>
         </div>
-        <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || signupStep === 'otp'}>
-            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
-        </Button>
-    </div>
+      )}
+
+      <div className="relative mt-6">
+          <Separator className="absolute top-1/2 -translate-y-1/2" />
+          <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or</span>
+          </div>
+      </div>
+      <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || signupStep === 'otp'}>
+          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
+      </Button>
+    </Form>
   );
 }
