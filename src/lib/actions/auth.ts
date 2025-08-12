@@ -312,14 +312,13 @@ export async function sendPasswordResetLink(email: string) {
     const users = db.collection('users');
 
     const user = await users.findOne({ email });
-    // Always reply success to avoid email enumeration
     if (!user) {
       return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
 
     const token = crypto.randomBytes(32).toString('hex');
     const hashedToken = await bcrypt.hash(token, 10);
-    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await users.updateOne(
       { _id: user._id },
@@ -348,6 +347,7 @@ export async function sendPasswordResetLink(email: string) {
   }
 }
 
+
 export async function resetPassword(values: z.infer<typeof passwordResetSchema>) {
   const validation = passwordResetSchema.safeParse(values);
   if (!validation.success) {
@@ -360,6 +360,7 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
     const db = client.db('adfleek');
     const users = db.collection('users');
 
+    // Find users with a potentially valid token (not expired)
     const potentialUsers = await users
       .find({
         resetPasswordExpires: { $gt: new Date() },
@@ -368,6 +369,7 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
 
     let userToUpdate = null;
     for (const u of potentialUsers) {
+      // Compare the provided token with each user's hashed token
       if (u.resetPasswordToken && (await bcrypt.compare(token, u.resetPasswordToken))) {
         userToUpdate = u;
         break;
