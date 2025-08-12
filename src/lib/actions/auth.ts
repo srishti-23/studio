@@ -353,7 +353,8 @@ export async function sendPasswordResetLink(email: string) {
 export async function resetPassword(values: z.infer<typeof passwordResetSchema>) {
   const validation = passwordResetSchema.safeParse(values);
   if (!validation.success) {
-    return { success: false, message: 'Invalid input.' };
+    const issues = validation.error.issues.map(issue => issue.message).join(' ');
+    return { success: false, message: `Invalid input: ${issues}` };
   }
 
   try {
