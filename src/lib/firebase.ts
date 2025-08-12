@@ -4,12 +4,12 @@ import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyC-UysT7J3MHICjG_gt2GZEcgYrVAxRs8A",
+  authDomain: "adfleek.firebaseapp.com",
+  projectId: "adfleek",
+  storageBucket: "adfleek.firebasestorage.app",
+  messagingSenderId: "334866138024",
+  appId: "1:334866138024:web:8ff8316658a23059bb939d"
 };
 
 // Initialize Firebase

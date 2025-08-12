@@ -75,9 +75,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
         if (isLogin) {
             const result = await loginUser(values as z.infer<typeof loginSchema>);
-            if (result.success) {
+            if (result.success && result.user) {
+                login(result.user);
                 toast({ title: "Login Successful", description: "Welcome back!" });
-                login(result.user!);
                 router.push("/");
             } else {
                 toast({ variant: "destructive", title: "Login Failed", description: result.message });
@@ -112,9 +112,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
             uid: user.uid,
         });
 
-        if (dbResult.success) {
-            toast({ title: "Sign-In Successful", description: "Welcome to AdFleek!" });
-            login(dbResult.user!);
+        if (dbResult.success && dbResult.user) {
+            login(dbResult.user);
+            toast({ title: "Login Successful", description: `Welcome, ${dbResult.user.name}!` });
             router.push('/');
         } else {
             toast({ variant: "destructive", title: "Sign-In Failed", description: dbResult.message });
