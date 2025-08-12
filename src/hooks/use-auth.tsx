@@ -34,9 +34,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (firebaseUser) {
             // User is signed in with Firebase, now check our DB
             try {
-                const cookieUser = getCookie('user');
-                if (cookieUser && typeof cookieUser === 'string') {
-                    setUser(JSON.parse(cookieUser));
+                const cookieUserStr = getCookie('user');
+                if (cookieUserStr && typeof cookieUserStr === 'string') {
+                    const cookieUser = JSON.parse(cookieUserStr);
+                    if (cookieUser.email === firebaseUser.email) {
+                         setUser(cookieUser);
+                    } else {
+                        // This case handles a mismatch, maybe the user changed in Firebase.
+                        // We sign out from client state and let the next block handle it.
+                        await signOut(auth);
+                        setUser(null);
+                        deleteCookie('user');
+                    }
                 } else if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
                      // This handles the case where the cookie is gone but user is still logged into firebase
                     const result = await findOrCreateUserFromGoogle({
@@ -52,6 +61,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 }
             } catch (e) {
                  await signOut(auth);
+                 setUser(null);
+                 deleteCookie('user');
             }
         } else {
             // User is signed out
@@ -62,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = (userData: User) => {
@@ -70,10 +82,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    await signOut(auth);
-    deleteCookie('user');
-    setUser(null);
-    router.push('/login');
+    try {
+      await signOut(auth);
+    } catch(error) {
+      console.error("Error signing out from Firebase", error);
+    } finally {
+      deleteCookie('user');
+      setUser(null);
+      router.push('/login');
+    }
   };
 
   return (
