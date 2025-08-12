@@ -34,7 +34,7 @@ export async function createConversation(
   firstMessage: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
   const user = getAuthUser();
-  // if (!user) return { success: false, message: 'User not authenticated.' };
+  if (!user) return { success: false, message: 'User not authenticated.' };
 
   try {
     const client = await clientPromise;
@@ -42,7 +42,7 @@ export async function createConversation(
     const conversationsCollection = db.collection('conversations');
 
     const newConversation = {
-      // userId: new ObjectId(user.id), // Removed auth check
+      userId: new ObjectId(user.id),
       title: firstMessage.prompt,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -68,7 +68,7 @@ export async function addMessageToConversation(
   message: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
   const user = getAuthUser();
-  // if (!user) return { success: false, message: 'User not authenticated.' };
+  if (!user) return { success: false, message: 'User not authenticated.' };
 
   try {
     const client = await clientPromise;
@@ -78,7 +78,7 @@ export async function addMessageToConversation(
     const newMessage = { ...message, id: Date.now(), createdAt: new Date() };
 
     const result = await conversationsCollection.updateOne(
-      { _id: new ObjectId(conversationId) }, // Removed userId check
+      { _id: new ObjectId(conversationId), userId: new ObjectId(user.id) },
       {
         $push: { messages: newMessage },
         $set: { updatedAt: new Date() },
@@ -100,7 +100,7 @@ export async function addMessageToConversation(
 
 export async function getConversations() {
   const user = getAuthUser();
-  // if (!user) return { success: false, message: 'User not authenticated.', conversations: [] };
+  if (!user) return { success: false, message: 'User not authenticated.', conversations: [] };
 
   try {
     const client = await clientPromise;
@@ -109,7 +109,7 @@ export async function getConversations() {
 
     const conversations = await conversationsCollection
       .find(
-        {}, // Removed userId filter
+        { userId: new ObjectId(user.id) },
         {
           projection: {
             _id: 1,
@@ -143,7 +143,7 @@ export async function getConversations() {
 
 export async function getConversationById(conversationId: string) {
   const user = getAuthUser();
-  // if (!user) return { success: false, message: 'User not authenticated.' };
+  if (!user) return { success: false, message: 'User not authenticated.' };
 
   try {
     const client = await clientPromise;
@@ -152,11 +152,11 @@ export async function getConversationById(conversationId: string) {
 
     const conversation = await conversationsCollection.findOne({
       _id: new ObjectId(conversationId),
-      // userId: new ObjectId(user.id), // Removed auth check
+      userId: new ObjectId(user.id),
     });
 
     if (!conversation) {
-      return { success: false, message: 'Conversation not found.' };
+      return { success: false, message: 'Conversation not found or you do not have access.' };
     }
 
     return { success: true, conversation: JSON.parse(JSON.stringify(conversation)) };
