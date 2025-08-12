@@ -313,6 +313,7 @@ export async function sendPasswordResetLink(email: string) {
 
     const user = await users.findOne({ email });
     if (!user) {
+      // Don't reveal if user exists for security reasons
       return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
 
@@ -337,7 +338,9 @@ export async function sendPasswordResetLink(email: string) {
         html: passwordResetTemplate(user.name || 'there', resetUrl),
       });
     } else {
-      console.log(`Password reset link (for testing): ${resetUrl}`);
+      console.log('--- EMAIL SENDING SKIPPED (NO CREDENTIALS) ---');
+      console.log(`Password reset link for ${email}: ${resetUrl}`);
+      console.log('-------------------------------------------------');
     }
 
     return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
