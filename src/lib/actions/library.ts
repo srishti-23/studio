@@ -5,14 +5,23 @@ import clientPromise from '@/lib/mongodb';
 import { cookies } from 'next/headers';
 import { ObjectId } from 'mongodb';
 
-export async function addImageToLibrary(imageUrl: string) {
-    const cookieStore = cookies();
-    const userCookie = cookieStore.get('user');
-    if (!userCookie) return { success: false, message: 'User not authenticated.' };
-    
-    const user = JSON.parse(userCookie.value);
-    const userId = user.id;
+function getAuthUser() {
+  const userCookie = cookies().get('user');
+  if (!userCookie) return null;
 
+  try {
+    const user = JSON.parse(userCookie.value);
+    if (!user || !user.id) return null;
+    return user as { id: string; email?: string; name?: string };
+  } catch {
+    return null;
+  }
+}
+
+export async function addImageToLibrary(imageUrl: string) {
+    const user = getAuthUser();
+    if (!user) return { success: false, message: 'User not authenticated.' };
+    
     if (!imageUrl) return { success: false, message: 'Image URL is required.' };
 
     try {
@@ -21,7 +30,7 @@ export async function addImageToLibrary(imageUrl: string) {
         const librariesCollection = db.collection('libraries');
 
         await librariesCollection.updateOne(
-            { userId: new ObjectId(userId) },
+            { userId: new ObjectId(user.id) },
             {
                 $push: {
                     images: {
@@ -29,12 +38,12 @@ export async function addImageToLibrary(imageUrl: string) {
                             src: imageUrl,
                             alt: 'Generated image', // You might want to pass a real alt text
                             createdAt: new Date(),
-                            id: new ObjectId(),
+                            _id: new ObjectId(), // Use _id for consistency with MongoDB
                         }],
                         $position: 0 // Adds to the beginning of the array (stack order)
                     }
                 },
-                $setOnInsert: { userId: new ObjectId(userId) }
+                $setOnInsert: { userId: new ObjectId(user.id) }
             },
             { upsert: true }
         );
@@ -48,19 +57,15 @@ export async function addImageToLibrary(imageUrl: string) {
 }
 
 export async function getLibraryImages() {
-    const cookieStore = cookies();
-    const userCookie = cookieStore.get('user');
-    if (!userCookie) return { success: false, message: 'User not authenticated.', images: [] };
+    const user = getAuthUser();
+    if (!user) return { success: false, message: 'User not authenticated.', images: [] };
 
     try {
-        const user = JSON.parse(userCookie.value);
-        const userId = user.id;
-        
         const client = await clientPromise;
         const db = client.db("adfleek");
         const librariesCollection = db.collection('libraries');
 
-        const library = await librariesCollection.findOne({ userId: new ObjectId(userId) });
+        const library = await librariesCollection.findOne({ userId: new ObjectId(user.id) });
 
         if (!library || !library.images) {
             return { success: true, images: [] };

@@ -6,7 +6,7 @@ import { Heart, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImageItem {
-  id: number;
+  _id: string;
   src: string;
   alt: string;
 }
@@ -22,7 +22,7 @@ export default function MasonryGrid({ images }: MasonryGridProps) {
     >
       {images.map((image) => (
         <Card
-          key={image.id}
+          key={image._id}
           className="group overflow-hidden break-inside-avoid rounded-xl shadow-lg transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-2xl hover:shadow-primary/20 relative"
         >
             <Image

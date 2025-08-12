@@ -18,7 +18,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LibraryImage {
-  id: string;
+  _id: string;
   src: string;
   alt: string;
 }
