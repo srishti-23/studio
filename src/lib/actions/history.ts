@@ -41,7 +41,7 @@ export async function createConversation(firstMessage: Omit<z.infer<typeof messa
         const conversationsCollection = db.collection('conversations');
 
         const newConversation = {
-            userId: user.id, // Use string ID directly
+            userId: new ObjectId(user.id), // Ensure userId is stored as ObjectId
             title: firstMessage.prompt,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -51,6 +51,7 @@ export async function createConversation(firstMessage: Omit<z.infer<typeof messa
         const result = await conversationsCollection.insertOne(newConversation);
         
         revalidatePath('/');
+        revalidatePath('/?conversationId=*');
         return { success: true, conversationId: result.insertedId.toString() };
 
     } catch (error) {
@@ -84,7 +85,7 @@ export async function addMessageToConversation(conversationId: string, message: 
 
         // Ensure the conversation belongs to the user before updating
         const result = await conversationsCollection.updateOne(
-            { _id: new ObjectId(conversationId), userId: user.id },
+            { _id: new ObjectId(conversationId), userId: new ObjectId(user.id) },
             { 
                 $push: { messages: newMessage },
                 $set: { updatedAt: new Date() }
@@ -96,6 +97,7 @@ export async function addMessageToConversation(conversationId: string, message: 
         }
         
         revalidatePath('/');
+        revalidatePath('/?conversationId=*');
         return { success: true, message: 'Message added.' };
     } catch (error) {
         console.error('Add message error:', error);
@@ -125,11 +127,30 @@ export async function getConversations() {
         const conversationsCollection = db.collection('conversations');
 
         const conversations = await conversationsCollection.find(
-            { userId: user.id },
-            { projection: { _id: 1, title: 1, createdAt: 1, 'messages.imageUrls': { $slice: 1 } } }
+            { userId: new ObjectId(user.id) },
+            { 
+              projection: { 
+                _id: 1, 
+                title: 1, 
+                createdAt: 1, 
+                messages: { $slice: 1 } // Project only the first message
+              } 
+            }
         ).sort({ updatedAt: -1 }).limit(20).toArray();
 
-        return { success: true, conversations: JSON.parse(JSON.stringify(conversations)) };
+        // Get the first image URL from the first message
+        const processedConversations = conversations.map(convo => {
+            const firstMessage = convo.messages?.[0];
+            const imageUrl = firstMessage?.imageUrls?.[0] || null;
+            return {
+                ...convo,
+                firstImageUrl: imageUrl,
+                messages: undefined, // Remove the messages array from the final payload
+            };
+        });
+
+
+        return { success: true, conversations: JSON.parse(JSON.stringify(processedConversations)) };
     } catch (error) {
         console.error('Get conversations error:', error);
         return { success: false, message: 'An unexpected error occurred.', conversations: [] };
@@ -159,7 +180,7 @@ export async function getConversationById(conversationId: string) {
 
         const conversation = await conversationsCollection.findOne({ 
             _id: new ObjectId(conversationId),
-            userId: user.id 
+            userId: new ObjectId(user.id) 
         });
 
         if (!conversation) {

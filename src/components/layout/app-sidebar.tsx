@@ -40,7 +40,7 @@ interface Conversation {
   _id: string;
   title: string;
   createdAt: string;
-  messages: { imageUrls: string[] }[];
+  firstImageUrl: string | null;
 }
 
 interface AppSidebarProps {
@@ -115,8 +115,8 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                     conversations.map(convo => (
                     <SidebarMenuItem key={convo._id} onClick={() => handleConversationClick(convo._id)}>
                         <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
-                            {convo.messages?.[0]?.imageUrls?.[0] ? (
-                                <Image src={convo.messages[0].imageUrls[0]} alt={convo.title} width={40} height={40} className="rounded-md bg-muted" data-ai-hint="advertisement design" />
+                            {convo.firstImageUrl ? (
+                                <Image src={convo.firstImageUrl} alt={convo.title} width={40} height={40} className="rounded-md bg-muted object-cover" data-ai-hint="advertisement design" />
                             ) : (
                                 <div className="w-10 h-10 bg-muted rounded-md flex items-center justify-center">
                                     <MessageSquare className="w-5 h-5 text-muted-foreground"/>
