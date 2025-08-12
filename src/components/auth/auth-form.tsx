@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -20,29 +20,28 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { signupUser, loginUser, findOrCreateUserFromGoogle } from "@/lib/actions/auth";
+import { signupUser, loginUser, findOrCreateUserFromGoogle, sendVerificationOtp } from "@/lib/actions/auth";
 import { auth } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import OtpInput from "./otp-input";
+import Link from "next/link";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address."),
   password: z.string().min(1, "Password is required."),
 });
 
-const signupSchema = z
-  .object({
-    email: z.string().email("Please enter a valid email address."),
-    password: z.string().min(8, "Password must be at least 8 characters."),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
+const signupSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
 
 type AuthFormProps = {
   mode: "login" | "signup";
 };
+
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" {...props}>
@@ -59,6 +58,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const { login } = useAuth();
   const isLogin = mode === "login";
+
+  // State for signup flow
+  const [signupStep, setSignupStep] = useState<'details' | 'otp'>('details');
+  const [signupData, setSignupData] = useState<SignupFormValues | null>(null);
+  const [otp, setOtp] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   const schema = isLogin ? loginSchema : signupSchema;
 
   const form = useForm<z.infer<typeof schema>>({
@@ -66,125 +72,144 @@ export default function AuthForm({ mode }: AuthFormProps) {
     defaultValues: {
       email: "",
       password: "",
-      ...(isLogin ? {} : { confirmPassword: "" }),
+      ...(isLogin ? {} : { name: "" }),
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof schema>) => {
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+
+  const handleLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
     try {
-        if (isLogin) {
-            const result = await loginUser(values as z.infer<typeof loginSchema>);
-            if (result.success && result.user) {
-                login(result.user);
-                toast({ title: "Login Successful", description: "Welcome back!" });
-                router.push("/");
-            } else {
-                toast({ variant: "destructive", title: "Login Failed", description: result.message });
-            }
-        } else {
-            const result = await signupUser(values as z.infer<typeof signupSchema>);
-            if (result.success) {
-                toast({ title: "Signup Successful", description: "Your account has been created. Please log in." });
-                router.push("/login");
-            } else {
-                toast({ variant: "destructive", title: "Signup Failed", description: result.message });
-            }
-        }
+      const result = await loginUser(values);
+      if (result.success && result.user) {
+        login(result.user);
+        toast({ title: "Login Successful", description: "Welcome back!" });
+        router.push("/");
+      } else {
+        toast({ variant: "destructive", title: "Login Failed", description: result.message });
+      }
     } catch (error) {
-         toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred." });
+       toast({ variant: "destructive", title: "Error", description: "An unexpected error occurred." });
     } finally {
         setIsSubmitting(false);
     }
   };
+
+  const handleSignupDetailsSubmit = async (values: SignupFormValues) => {
+    setIsSubmitting(true);
+    setSignupData(values);
+    const result = await sendVerificationOtp(values.email);
+    if (result.success) {
+      if (result.otp) { // For development: show OTP in toast
+        toast({ title: "Verification Code Sent", description: `For testing, your OTP is: ${result.otp}` });
+      } else {
+        toast({ title: "Verification Code Sent", description: "An OTP has been sent to your email." });
+      }
+      setSignupStep('otp');
+      setResendCooldown(30);
+    } else {
+      toast({ variant: "destructive", title: "Signup Failed", description: result.message });
+    }
+    setIsSubmitting(false);
+  };
+  
+  const handleResendOtp = async () => {
+    if (signupData && resendCooldown === 0) {
+      setIsSubmitting(true);
+      const result = await sendVerificationOtp(signupData.email);
+      if (result.success) {
+        if (result.otp) {
+          toast({ title: "Verification Code Sent", description: `For testing, your OTP is: ${result.otp}` });
+        } else {
+          toast({ title: "Verification Code Sent", description: "A new OTP has been sent." });
+        }
+        setResendCooldown(30);
+      } else {
+        toast({ variant: "destructive", title: "Failed to resend", description: result.message });
+      }
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOtpSubmit = async () => {
+    if (!signupData || otp.length !== 6) return;
+    setIsSubmitting(true);
+    const result = await signupUser(signupData, otp);
+    if (result.success && result.user) {
+        login(result.user);
+        toast({ title: "Signup Successful", description: "Welcome to AdFleek!" });
+        router.push("/");
+    } else {
+        toast({ variant: "destructive", title: "Verification Failed", description: result.message });
+    }
+    setIsSubmitting(false);
+  };
   
   const handleGoogleSignIn = async () => {
-    console.log("handleGoogleSignIn triggered");
     setIsSubmitting(true);
     try {
-      console.log("Creating GoogleAuthProvider...");
       const provider = new GoogleAuthProvider();
-      console.log("Calling signInWithPopup...");
       const result = await signInWithPopup(auth, provider);
-      console.log("Google Sign-In successful. Result:", result);
       const { user } = result;
 
       if (user.email && user.displayName && user.uid) {
-        console.log("User object is valid. Calling findOrCreateUserFromGoogle with:", {
-          email: user.email,
-          name: user.displayName,
-          uid: user.uid,
-        });
         const dbResult = await findOrCreateUserFromGoogle({
             email: user.email,
             name: user.displayName,
             uid: user.uid,
         });
-        console.log("Database result:", dbResult);
 
         if (dbResult.success && dbResult.user) {
-            console.log("Database operation successful. Logging in user...");
             login(dbResult.user);
             toast({ title: "Login Successful", description: `Welcome, ${dbResult.user.name}!` });
             router.push('/');
         } else {
-            console.error("Database operation failed:", dbResult.message);
             toast({ variant: "destructive", title: "Sign-In Failed", description: dbResult.message });
         }
       } else {
-        console.error("Could not retrieve all required user information from Google.", user);
         toast({ variant: "destructive", title: "Sign-In Failed", description: "Could not retrieve user information from Google." });
       }
 
     } catch (error: any) {
         if (error.code !== 'auth/popup-closed-by-user') {
-            console.error("Google Sign-In error:", error);
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
-        } else {
-            console.log("Google Sign-In popup closed by user.");
         }
     } finally {
-        console.log("handleGoogleSignIn finished.");
         setIsSubmitting(false);
     }
   };
 
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="name@example.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {!isLogin && (
+  if (isLogin) {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleLoginSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="confirmPassword"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="name@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
                 <FormControl>
                   <Input type="password" placeholder="••••••••" {...field} />
                 </FormControl>
@@ -192,20 +217,111 @@ export default function AuthForm({ mode }: AuthFormProps) {
               </FormItem>
             )}
           />
+          <div className="text-right text-sm">
+            <Link href="/forgot-password" passHref className="text-muted-foreground hover:text-primary hover:underline">
+                Forgot Password?
+            </Link>
+          </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Log In"}
+          </Button>
+          <div className="relative">
+              <Separator className="absolute top-1/2 -translate-y-1/2" />
+              <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              </div>
+          </div>
+          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
+          </Button>
+        </form>
+      </Form>
+    );
+  }
+
+  // Signup form
+  return (
+    <div>
+        {signupStep === 'details' ? (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSignupDetailsSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your Name" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="name@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Verify Email"}
+              </Button>
+            </form>
+          </Form>
+        ) : (
+          <div className="space-y-6 text-center">
+            <div>
+              <FormLabel>Enter OTP</FormLabel>
+              <p className="text-sm text-muted-foreground">An OTP was sent to {signupData?.email}</p>
+            </div>
+            <OtpInput value={otp} onChange={setOtp} />
+            <Button className="w-full" onClick={handleOtpSubmit} disabled={isSubmitting || otp.length < 6}>
+              {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Create Account"}
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              Didn't receive the code?{' '}
+              <button
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || isSubmitting}
+                className="font-semibold text-primary hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground"
+              >
+                {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+              </button>
+            </div>
+            <Button variant="link" onClick={() => setSignupStep('details')}>Back</Button>
+          </div>
         )}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? <LoaderCircle className="animate-spin" /> : (isLogin ? "Log In" : "Sign Up")}
-        </Button>
-        <div className="relative">
+
+        <div className="relative mt-6">
             <Separator className="absolute top-1/2 -translate-y-1/2" />
             <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-card px-2 text-muted-foreground">Or</span>
             </div>
         </div>
-        <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
+        <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || signupStep === 'otp'}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
         </Button>
-      </form>
-    </Form>
+    </div>
   );
 }

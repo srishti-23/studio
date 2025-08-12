@@ -100,3 +100,13 @@
   animation: move-particles linear infinite;
   will-change: transform, opacity;
 }
+
+/* Hide number input spinners */
+.spin-button-none::-webkit-outer-spin-button,
+.spin-button-none::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.spin-button-none {
+  -moz-appearance: textfield;
+}

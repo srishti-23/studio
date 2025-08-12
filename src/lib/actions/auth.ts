@@ -5,17 +5,15 @@ import clientPromise from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { ObjectId } from 'mongodb';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
-const signupSchema = z
-  .object({
-    email: z.string().email(),
-    password: z.string().min(8, "Password must be at least 8 characters."),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
-  });
+// --- SCHEMAS ---
+const signupSchema = z.object({
+  name: z.string().min(2, "Name is required."),
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(8, "Password must be at least 8 characters."),
+});
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -28,39 +26,160 @@ const googleUserSchema = z.object({
     uid: z.string(),
 });
 
-export async function signupUser(values: z.infer<typeof signupSchema>) {
+const verifyOtpSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6, "OTP must be 6 digits."),
+});
+
+const passwordResetSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters."),
+  confirmPassword: z.string(),
+  token: z.string().min(1, "Token is missing."),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match.",
+  path: ["confirmPassword"],
+});
+
+
+// --- EMAIL HELPERS ---
+function getTransporter() {
+  if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_SERVER_HOST) {
+    console.warn("Email credentials are not set in .env file. Email sending will be skipped.");
+    return null;
+  }
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_SERVER_HOST,
+    port: parseInt(process.env.EMAIL_SERVER_PORT || "587", 10),
+    secure: (process.env.EMAIL_SERVER_PORT || "587") === '465',
+    auth: {
+      user: process.env.EMAIL_FROM,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+}
+
+const otpEmailTemplate = (otp: string) => `
+  <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+    <h2>AdFleek Email Verification</h2>
+    <p>Thank you for registering. Please use the following One-Time Password (OTP) to verify your account:</p>
+    <h2 style="font-size: 24px; letter-spacing: 4px; margin: 20px 0;">${otp}</h2>
+    <p>This OTP is valid for 5 minutes. If you did not request this, please disregard this email.</p>
+  </div>
+`;
+
+const passwordResetTemplate = (name: string, url: string) => `
+  <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+    <h2>AdFleek Password Reset Request</h2>
+    <p>Hello ${name},</p>
+    <p>We received a request to reset your password. Please click the link below to set a new password:</p>
+    <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 20px;">Reset Password</a>
+    <p style="margin-top: 20px;">This link is valid for 1 hour. If you did not request a password reset, please ignore this email.</p>
+  </div>
+`;
+
+
+// --- AUTH ACTIONS ---
+
+export async function sendVerificationOtp(email: string) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("adfleek");
+    const users = db.collection('users');
+
+    const existingUser = await users.findOne({ email });
+    if (existingUser && existingUser.emailVerified) {
+      return { success: false, message: 'This email is already verified.' };
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const hashedOtp = await bcrypt.hash(otp, 10);
+
+    await users.updateOne(
+        { email },
+        { $set: { otp: hashedOtp, otpExpires } },
+        { upsert: true } // Create a temporary user doc if one doesn't exist
+    );
+
+    const transporter = getTransporter();
+    if (transporter) {
+      await transporter.sendMail({
+        from: `"AdFleek" <${process.env.EMAIL_FROM}>`,
+        to: email,
+        subject: 'Your AdFleek Verification Code',
+        html: otpEmailTemplate(otp),
+      });
+      return { success: true, message: 'OTP sent to your email.' };
+    } else {
+      // For development when no email is configured
+      return { success: true, message: `OTP sent (testing): ${otp}`, otp };
+    }
+  } catch (error) {
+    console.error('sendVerificationOtp error:', error);
+    return { success: false, message: 'Could not send OTP.' };
+  }
+}
+
+export async function signupUser(values: z.infer<typeof signupSchema>, otp: string) {
   const validation = signupSchema.safeParse(values);
   if (!validation.success) {
     return { success: false, message: 'Invalid input.' };
+  }
+  
+  const otpValidation = verifyOtpSchema.safeParse({ email: values.email, otp });
+   if (!otpValidation.success) {
+    return { success: false, message: 'Invalid OTP format.' };
   }
 
   try {
     const client = await clientPromise;
     const db = client.db("adfleek");
-    const usersCollection = db.collection('users');
+    const users = db.collection('users');
+    
+    const user = await users.findOne({ email: values.email });
+    
+    if (!user || !user.otp) {
+        return { success: false, message: 'Please request an OTP first.' };
+    }
+    if (new Date() > user.otpExpires) {
+        return { success: false, message: 'OTP has expired. Please request a new one.' };
+    }
 
-    const existingUser = await usersCollection.findOne({ email: values.email });
-    if (existingUser) {
-      return { success: false, message: 'User with this email already exists.' };
+    const isOtpValid = await bcrypt.compare(otp, user.otp);
+    if (!isOtpValid) {
+        return { success: false, message: 'Invalid OTP.' };
+    }
+    
+    const existingVerifiedUser = await users.findOne({ email: values.email, emailVerified: true });
+    if (existingVerifiedUser) {
+        return { success: false, message: 'User with this email already exists.' };
     }
 
     const hashedPassword = await bcrypt.hash(values.password, 10);
-
-    const result = await usersCollection.insertOne({
-      email: values.email,
-      password: hashedPassword,
-      createdAt: new Date(),
-    });
+    
+    const result = await users.updateOne(
+      { email: values.email },
+      { 
+        $set: { 
+            name: values.name,
+            password: hashedPassword,
+            emailVerified: true,
+            createdAt: new Date(),
+        },
+        $unset: { otp: "", otpExpires: "" }
+      }
+    );
+    
+    const finalUser = await users.findOne({email: values.email});
     
     // Create an empty library for the new user
     const librariesCollection = db.collection('libraries');
     await librariesCollection.insertOne({
-        userId: result.insertedId,
+        userId: finalUser!._id,
         images: []
     });
 
-
-    return { success: true, message: 'Signup successful!' };
+    return { success: true, message: 'Signup successful!', user: { id: finalUser!._id.toString(), email: finalUser!.email, name: finalUser!.name }};
   } catch (error) {
     console.error('Signup error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
@@ -76,11 +195,15 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
   try {
     const client = await clientPromise;
     const db = client.db("adfleek");
-    const usersCollection = db.collection('users');
+    const users = db.collection('users');
 
-    const user = await usersCollection.findOne({ email: values.email });
-    if (!user) {
-      return { success: false, message: 'User not found. Please sign up.' };
+    const user = await users.findOne({ email: values.email });
+    if (!user || !user.password) {
+      return { success: false, message: 'Invalid email or password.' };
+    }
+    
+    if (!user.emailVerified) {
+        return { success: false, message: 'Please verify your email before logging in.' };
     }
 
     const isPasswordValid = await bcrypt.compare(values.password, user.password);
@@ -88,7 +211,7 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
       return { success: false, message: 'Invalid email or password.' };
     }
     
-    return { success: true, message: 'Login successful!', user: { id: user._id.toString(), email: user.email, name: user.email.split('@')[0] } };
+    return { success: true, message: 'Login successful!', user: { id: user._id.toString(), email: user.email, name: user.name } };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
@@ -100,32 +223,31 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     if (!validation.success) {
         return { success: false, message: 'Invalid input.' };
     }
-
     const { email, name, uid } = values;
 
     try {
         const client = await clientPromise;
         const db = client.db("adfleek");
-        const usersCollection = db.collection('users');
+        const users = db.collection('users');
         
-        let user = await usersCollection.findOne({ email });
+        let user = await users.findOne({ email });
 
         if (!user) {
-            const result = await usersCollection.insertOne({
+            const result = await users.insertOne({
                 email,
                 name,
+                emailVerified: true,
                 authProvider: 'google',
                 googleUid: uid,
                 createdAt: new Date(),
             });
-            const newUser = await usersCollection.findOne({ _id: result.insertedId });
+            const newUser = await users.findOne({ _id: result.insertedId });
             
             const librariesCollection = db.collection('libraries');
             await librariesCollection.insertOne({
                 userId: result.insertedId,
                 images: [],
             });
-
             user = newUser;
         }
 
@@ -137,5 +259,94 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     } catch (error) {
         console.error('Google user handling error:', error);
         return { success: false, message: 'An unexpected error occurred.' };
+    }
+}
+
+export async function sendPasswordResetLink(email: string) {
+    if (!email) {
+      return { success: false, message: "Email is required." };
+    }
+
+    try {
+        const client = await clientPromise;
+        const db = client.db("adfleek");
+        const users = db.collection('users');
+
+        const user = await users.findOne({ email });
+        if (!user) {
+            // Still return success to prevent email enumeration
+            return { success: true, message: "If an account with this email exists, a reset link has been sent." };
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const hashedToken = await bcrypt.hash(token, 10);
+        const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+        await users.updateOne({ _id: user._id }, { $set: { resetPasswordToken: hashedToken, resetPasswordExpires } });
+
+        const resetUrl = `http://localhost:9002/reset-password/${token}`;
+        
+        const transporter = getTransporter();
+        if (transporter) {
+            await transporter.sendMail({
+                from: `"AdFleek" <${process.env.EMAIL_FROM}>`,
+                to: email,
+                subject: 'Your AdFleek Password Reset Link',
+                html: passwordResetTemplate(user.name, resetUrl),
+            });
+        } else {
+             console.log(`Password reset link (testing): ${resetUrl}`);
+        }
+
+        return { success: true, message: "If an account with this email exists, a reset link has been sent." };
+    } catch (error) {
+        console.error("sendPasswordResetLink error:", error);
+        return { success: false, message: "An unexpected error occurred." };
+    }
+}
+
+export async function resetPassword(values: z.infer<typeof passwordResetSchema>) {
+    const validation = passwordResetSchema.safeParse(values);
+    if (!validation.success) {
+      return { success: false, message: "Invalid input." };
+    }
+
+    try {
+        const { password, token } = values;
+        const client = await clientPromise;
+        const db = client.db("adfleek");
+        const users = db.collection('users');
+        
+        // Find users who have a reset token that hasn't expired.
+        // We can't query by the token directly because we only stored the hash.
+        const potentialUsers = await users.find({
+            resetPasswordExpires: { $gt: new Date() }
+        }).toArray();
+        
+        let userToUpdate = null;
+        for (const user of potentialUsers) {
+            if (user.resetPasswordToken && await bcrypt.compare(token, user.resetPasswordToken)) {
+                userToUpdate = user;
+                break;
+            }
+        }
+        
+        if (!userToUpdate) {
+            return { success: false, message: "Invalid or expired password reset token." };
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await users.updateOne(
+            { _id: userToUpdate._id },
+            { 
+                $set: { password: hashedPassword },
+                $unset: { resetPasswordToken: "", resetPasswordExpires: "" }
+            }
+        );
+
+        return { success: true, message: "Password has been reset successfully." };
+    } catch (error) {
+        console.error("resetPassword error:", error);
+        return { success: false, message: "An unexpected error occurred." };
     }
 }
