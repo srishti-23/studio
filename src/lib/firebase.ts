@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyC-UysT7J3MHICjG_gt2GZEcgYrVAxRs8A",
   authDomain: "adfleek.firebaseapp.com",
   projectId: "adfleek",
-  storageBucket: "adfleek.firebasestorage.app",
+  storageBucket: "adfleek.appspot.com",
   messagingSenderId: "334866138024",
   appId: "1:334866138024:web:8ff8316658a23059bb939d"
 };
