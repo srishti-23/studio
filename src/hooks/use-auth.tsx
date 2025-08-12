@@ -1,13 +1,11 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { setCookie, getCookie, deleteCookie } from 'cookies-next';
-import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { findOrCreateUserFromGoogle } from '@/lib/actions/auth';
-
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { findOrCreateUserFromGoogle, getCurrentUser, logout as serverLogout } from "@/lib/actions/auth";
 
 interface User {
   id: string;
@@ -17,8 +15,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (user: User) => void;
-  logout: () => void;
+  login: (user: User) => void;   // sets client state only
+  logout: () => Promise<void>;   // calls server to clear cookie
   isLoading: boolean;
 }
 
@@ -29,68 +27,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // 1) Hydrate from server httpOnly cookie on first load/refresh
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-        if (firebaseUser) {
-            // User is signed in with Firebase, now check our DB
-            try {
-                const cookieUserStr = getCookie('user');
-                if (cookieUserStr && typeof cookieUserStr === 'string') {
-                    const cookieUser = JSON.parse(cookieUserStr);
-                    if (cookieUser.email === firebaseUser.email) {
-                         setUser(cookieUser);
-                    } else {
-                        // This case handles a mismatch, maybe the user changed in Firebase.
-                        // We sign out from client state and let the next block handle it.
-                        await signOut(auth);
-                        setUser(null);
-                        deleteCookie('user');
-                    }
-                } else if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-                     // This handles the case where the cookie is gone but user is still logged into firebase
-                    const result = await findOrCreateUserFromGoogle({
-                        email: firebaseUser.email,
-                        name: firebaseUser.displayName,
-                        uid: firebaseUser.uid,
-                    });
-                    if (result.success && result.user) {
-                        login(result.user);
-                    } else {
-                        await signOut(auth);
-                    }
-                }
-            } catch (e) {
-                 await signOut(auth);
-                 setUser(null);
-                 deleteCookie('user');
-            }
-        } else {
-            // User is signed out
-            setUser(null);
-            deleteCookie('user');
-        }
-        setIsLoading(false);
-    });
+    let unsub: (() => void) | undefined;
 
-    return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        const serverUser = await getCurrentUser();
+        if (serverUser) setUser(serverUser);
+      } finally {
+        setIsLoading(false);
+        // 2) Then attach Firebase listener (for Google sign-in path only)
+        unsub = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+          // If we already have an app user, we’re good.
+          if (user) return;
+
+          if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+            setIsLoading(true);
+            // Make sure user exists in our DB and httpOnly cookie is set by the server action.
+            const result = await findOrCreateUserFromGoogle({
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+              uid: firebaseUser.uid,
+            });
+            if (result?.success && result.user) {
+              setUser(result.user); // server action already set cookie; we only set state
+            } else {
+              await fbSignOut(auth).catch(() => {});
+              setUser(null);
+            }
+            setIsLoading(false);
+          } else {
+            // No Firebase user — do NOT try to delete server cookie here.
+            // Server cookie is managed by server actions (login/logout).
+          }
+        });
+        // If there is no firebase configured, ensure loading state ends.
+        if (!auth) setIsLoading(false);
+      }
+    })();
+
+    return () => {
+      if (unsub) unsub();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Client-side login just sets local state (server action already set the cookie)
   const login = (userData: User) => {
-    setCookie('user', JSON.stringify(userData), { maxAge: 60 * 60 * 24 * 7 }); // 7 days
     setUser(userData);
   };
 
   const logout = async () => {
+    setIsLoading(true);
     try {
-      await signOut(auth);
-    } catch(error) {
-      console.error("Error signing out from Firebase", error);
-    } finally {
-      deleteCookie('user');
-      setUser(null);
-      router.push('/login');
+      // Clear httpOnly cookie on the server
+      await serverLogout();
+    } catch (e) {
+      // ignore
     }
+    try {
+      // If Firebase was used, also sign it out
+      if (auth.currentUser) {
+        await fbSignOut(auth);
+      }
+    } catch (e) {
+      // ignore
+    }
+    setUser(null);
+    router.push("/login");
+    setIsLoading(false);
   };
 
   return (
@@ -101,9 +107,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+  const ctx = useContext(AuthContext);
+  if (ctx === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context;
+  return ctx;
 };

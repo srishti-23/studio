@@ -7,50 +7,79 @@ import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
+import { cookies } from 'next/headers';
 
 // --- SCHEMAS ---
 const signupSchema = z.object({
-  name: z.string().min(2, "Name is required."),
-  email: z.string().email("Please enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
+  name: z.string().min(2, 'Name is required.'),
+  email: z.string().email('Please enter a valid email address.'),
+  password: z.string().min(8, 'Password must be at least 8 characters.'),
 });
 
 const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(1, "Password is required."),
+  password: z.string().min(1, 'Password is required.'),
 });
 
 const googleUserSchema = z.object({
-    email: z.string().email(),
-    name: z.string(),
-    uid: z.string(),
+  email: z.string().email(),
+  name: z.string(),
+  uid: z.string(),
 });
 
 const verifyOtpSchema = z.object({
   email: z.string().email(),
-  otp: z.string().length(6, "OTP must be 6 digits."),
+  otp: z.string().length(6, 'OTP must be 6 digits.'),
 });
 
-const passwordResetSchema = z.object({
-  password: z.string().min(8, "Password must be at least 8 characters."),
-  confirmPassword: z.string(),
-  token: z.string().min(1, "Token is missing."),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match.",
-  path: ["confirmPassword"],
-});
+const passwordResetSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters.'),
+    confirmPassword: z.string(),
+    token: z.string().min(1, 'Token is missing.'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  });
 
+// --- COOKIE HELPERS ---
+function setUserCookie(user: {id: string, name: string, email: string}) {
+  cookies().set('user', JSON.stringify(user), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  });
+}
+
+export async function getCurrentUser() {
+    const userCookie = cookies().get('user');
+    if (!userCookie) return null;
+    try {
+        const user = JSON.parse(userCookie.value);
+        return user.id ? user : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+export async function logout() {
+  cookies().set('user', '', { path: '/', maxAge: 0 });
+  return { success: true };
+}
 
 // --- EMAIL HELPERS ---
 function getTransporter() {
   if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_SERVER_HOST) {
-    console.warn("Email credentials are not set in .env file. Email sending will be skipped.");
+    console.warn('Email credentials are not set in .env file. Email sending will be skipped.');
     return null;
   }
   return nodemailer.createTransport({
     host: process.env.EMAIL_SERVER_HOST,
-    port: parseInt(process.env.EMAIL_SERVER_PORT || "587", 10),
-    secure: (process.env.EMAIL_SERVER_PORT || "587") === '465',
+    port: parseInt(process.env.EMAIL_SERVER_PORT || '587', 10),
+    secure: (process.env.EMAIL_SERVER_PORT || '587') === '465',
     auth: {
       user: process.env.EMAIL_FROM,
       pass: process.env.EMAIL_PASSWORD,
@@ -77,13 +106,12 @@ const passwordResetTemplate = (name: string, url: string) => `
   </div>
 `;
 
-
 // --- AUTH ACTIONS ---
 
 export async function sendVerificationOtp(email: string) {
   try {
     const client = await clientPromise;
-    const db = client.db("adfleek");
+    const db = client.db('adfleek');
     const users = db.collection('users');
 
     const existingUser = await users.findOne({ email });
@@ -92,13 +120,13 @@ export async function sendVerificationOtp(email: string) {
     }
 
     const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
     const hashedOtp = await bcrypt.hash(otp, 10);
 
     await users.updateOne(
-        { email },
-        { $set: { otp: hashedOtp, otpExpires } },
-        { upsert: true } // Create a temporary user doc if one doesn't exist
+      { email },
+      { $set: { otp: hashedOtp, otpExpires } },
+      { upsert: true }
     );
 
     const transporter = getTransporter();
@@ -111,7 +139,6 @@ export async function sendVerificationOtp(email: string) {
       });
       return { success: true, message: 'OTP sent to your email.' };
     } else {
-      // For development when no email is configured
       return { success: true, message: `OTP sent (testing): ${otp}`, otp };
     }
   } catch (error) {
@@ -125,65 +152,67 @@ export async function signupUser(values: z.infer<typeof signupSchema>, otp: stri
   if (!validation.success) {
     return { success: false, message: 'Invalid input.' };
   }
-  
+
   const otpValidation = verifyOtpSchema.safeParse({ email: values.email, otp });
-   if (!otpValidation.success) {
+  if (!otpValidation.success) {
     return { success: false, message: 'Invalid OTP format.' };
   }
 
   try {
     const client = await clientPromise;
-    const db = client.db("adfleek");
+    const db = client.db('adfleek');
     const users = db.collection('users');
-    
+
     const user = await users.findOne({ email: values.email });
-    
+
     if (!user || !user.otp) {
-        return { success: false, message: 'Please request an OTP first.' };
+      return { success: false, message: 'Please request an OTP first.' };
     }
     if (user.otpExpires && new Date() > user.otpExpires) {
-        return { success: false, message: 'OTP has expired. Please request a new one.' };
+      return { success: false, message: 'OTP has expired. Please request a new one.' };
     }
 
     const isOtpValid = await bcrypt.compare(otp, user.otp);
     if (!isOtpValid) {
-        return { success: false, message: 'Invalid OTP.' };
+      return { success: false, message: 'Invalid OTP.' };
     }
-    
+
     const existingVerifiedUser = await users.findOne({ email: values.email, emailVerified: true });
     if (existingVerifiedUser) {
-        return { success: false, message: 'User with this email already exists.' };
+      return { success: false, message: 'User with this email already exists.' };
     }
 
     const hashedPassword = await bcrypt.hash(values.password, 10);
-    
-    const result = await users.updateOne(
+
+    await users.updateOne(
       { email: values.email },
-      { 
-        $set: { 
-            name: values.name,
-            password: hashedPassword,
-            emailVerified: true,
-            createdAt: new Date(),
+      {
+        $set: {
+          name: values.name,
+          password: hashedPassword,
+          emailVerified: true,
+          createdAt: new Date(),
         },
-        $unset: { otp: "", otpExpires: "" }
+        $unset: { otp: '', otpExpires: '' },
       }
     );
-    
-    const finalUser = await users.findOne({email: values.email});
 
+    const finalUser = await users.findOne({ email: values.email });
     if (!finalUser) {
-        return { success: false, message: 'Could not finalize user creation.' };
+      return { success: false, message: 'Could not finalize user creation.' };
     }
-    
+
     // Create an empty library for the new user
     const librariesCollection = db.collection('libraries');
     await librariesCollection.insertOne({
-        userId: finalUser._id,
-        images: []
+      userId: finalUser._id,
+      images: [],
     });
 
-    return { success: true, message: 'Signup successful!', user: { id: finalUser._id.toString(), email: finalUser.email, name: finalUser.name }};
+    const u = { id: finalUser._id.toString(), email: finalUser.email, name: finalUser.name };
+    setUserCookie(u);
+
+    return { success: true, message: 'Signup successful!', user: u };
   } catch (error) {
     console.error('Signup error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
@@ -198,24 +227,27 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
 
   try {
     const client = await clientPromise;
-    const db = client.db("adfleek");
+    const db = client.db('adfleek');
     const users = db.collection('users');
 
     const user = await users.findOne({ email: values.email });
     if (!user || !user.password) {
       return { success: false, message: 'Invalid email or password.' };
     }
-    
+
     if (!user.emailVerified) {
-        return { success: false, message: 'Please verify your email before logging in.' };
+      return { success: false, message: 'Please verify your email before logging in.' };
     }
 
     const isPasswordValid = await bcrypt.compare(values.password, user.password);
     if (!isPasswordValid) {
       return { success: false, message: 'Invalid email or password.' };
     }
-    
-    return { success: true, message: 'Login successful!', user: { id: user._id.toString(), email: user.email, name: user.name } };
+
+    const u = { id: user._id.toString(), email: user.email, name: user.name };
+    setUserCookie(u);
+
+    return { success: true, message: 'Login successful!', user: u };
   } catch (error) {
     console.error('Login error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
@@ -223,136 +255,141 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
 }
 
 export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUserSchema>) {
-    const validation = googleUserSchema.safeParse(values);
-    if (!validation.success) {
-        return { success: false, message: 'Invalid input.' };
+  const validation = googleUserSchema.safeParse(values);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid input.' };
+  }
+  const { email, name, uid } = values;
+
+  try {
+    const client = await clientPromise;
+    const db = client.db('adfleek');
+    const users = db.collection('users');
+
+    let user = await users.findOne({ email });
+
+    if (!user) {
+      const result = await users.insertOne({
+        email,
+        name,
+        emailVerified: true,
+        authProvider: 'google',
+        googleUid: uid,
+        createdAt: new Date(),
+      });
+
+      const librariesCollection = db.collection('libraries');
+      await librariesCollection.insertOne({
+        userId: result.insertedId,
+        images: [],
+      });
+
+      user = await users.findOne({ _id: result.insertedId });
     }
-    const { email, name, uid } = values;
 
-    try {
-        const client = await clientPromise;
-        const db = client.db("adfleek");
-        const users = db.collection('users');
-        
-        let user = await users.findOne({ email });
-
-        if (!user) {
-            const result = await users.insertOne({
-                email,
-                name,
-                emailVerified: true,
-                authProvider: 'google',
-                googleUid: uid,
-                createdAt: new Date(),
-            });
-            const newUser = await users.findOne({ _id: result.insertedId });
-            
-            const librariesCollection = db.collection('libraries');
-            await librariesCollection.insertOne({
-                userId: result.insertedId,
-                images: [],
-            });
-            user = newUser;
-        }
-
-        if (!user) {
-             return { success: false, message: 'Could not find or create user.' };
-        }
-
-        return { success: true, user: { id: user._id.toString(), email: user.email, name: user.name } };
-    } catch (error) {
-        console.error('Google user handling error:', error);
-        return { success: false, message: 'An unexpected error occurred.' };
+    if (!user) {
+      return { success: false, message: 'Could not find or create user.' };
     }
+
+    const u = { id: user._id.toString(), email: user.email, name: user.name };
+    setUserCookie(u);
+
+    return { success: true, user: u };
+  } catch (error) {
+    console.error('Google user handling error:', error);
+    return { success: false, message: 'An unexpected error occurred.' };
+  }
 }
 
 export async function sendPasswordResetLink(email: string) {
-    if (!email) {
-      return { success: false, message: "Email is required." };
+  if (!email) {
+    return { success: false, message: 'Email is required.' };
+  }
+
+  try {
+    const client = await clientPromise;
+    const db = client.db('adfleek');
+    const users = db.collection('users');
+
+    const user = await users.findOne({ email });
+    // Always reply success to avoid email enumeration
+    if (!user) {
+      return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
 
-    try {
-        const client = await clientPromise;
-        const db = client.db("adfleek");
-        const users = db.collection('users');
+    const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(token, 10);
+    const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
 
-        const user = await users.findOne({ email });
-        if (!user) {
-            // Still return success to prevent email enumeration
-            return { success: true, message: "If an account with this email exists, a reset link has been sent." };
-        }
+    await users.updateOne(
+      { _id: user._id },
+      { $set: { resetPasswordToken: hashedToken, resetPasswordExpires } }
+    );
 
-        const token = crypto.randomBytes(32).toString("hex");
-        const hashedToken = await bcrypt.hash(token, 10);
-        const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+    const resetUrl = `${base}/reset-password/${token}`;
 
-        await users.updateOne({ _id: user._id }, { $set: { resetPasswordToken: hashedToken, resetPasswordExpires } });
-
-        const resetUrl = `http://localhost:9002/reset-password/${token}`;
-        
-        const transporter = getTransporter();
-        if (transporter) {
-            await transporter.sendMail({
-                from: `"AdFleek" <${process.env.EMAIL_FROM}>`,
-                to: email,
-                subject: 'Your AdFleek Password Reset Link',
-                html: passwordResetTemplate(user.name, resetUrl),
-            });
-        } else {
-             console.log(`Password reset link (for testing): ${resetUrl}`);
-        }
-
-        return { success: true, message: "If an account with this email exists, a reset link has been sent." };
-    } catch (error) {
-        console.error("sendPasswordResetLink error:", error);
-        return { success: false, message: "An unexpected error occurred." };
+    const transporter = getTransporter();
+    if (transporter) {
+      await transporter.sendMail({
+        from: `"AdFleek" <${process.env.EMAIL_FROM}>`,
+        to: email,
+        subject: 'Your AdFleek Password Reset Link',
+        html: passwordResetTemplate(user.name || 'there', resetUrl),
+      });
+    } else {
+      console.log(`Password reset link (for testing): ${resetUrl}`);
     }
+
+    return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
+  } catch (error) {
+    console.error('sendPasswordResetLink error:', error);
+    return { success: false, message: 'An unexpected error occurred.' };
+  }
 }
 
 export async function resetPassword(values: z.infer<typeof passwordResetSchema>) {
-    const validation = passwordResetSchema.safeParse(values);
-    if (!validation.success) {
-      return { success: false, message: "Invalid input." };
+  const validation = passwordResetSchema.safeParse(values);
+  if (!validation.success) {
+    return { success: false, message: 'Invalid input.' };
+  }
+
+  try {
+    const { password, token } = values;
+    const client = await clientPromise;
+    const db = client.db('adfleek');
+    const users = db.collection('users');
+
+    const potentialUsers = await users
+      .find({
+        resetPasswordExpires: { $gt: new Date() },
+      })
+      .toArray();
+
+    let userToUpdate = null;
+    for (const u of potentialUsers) {
+      if (u.resetPasswordToken && (await bcrypt.compare(token, u.resetPasswordToken))) {
+        userToUpdate = u;
+        break;
+      }
     }
 
-    try {
-        const { password, token } = values;
-        const client = await clientPromise;
-        const db = client.db("adfleek");
-        const users = db.collection('users');
-        
-        // Find users who have a reset token that hasn't expired.
-        // We can't query by the token directly because we only stored the hash.
-        const potentialUsers = await users.find({
-            resetPasswordExpires: { $gt: new Date() }
-        }).toArray();
-        
-        let userToUpdate = null;
-        for (const user of potentialUsers) {
-            if (user.resetPasswordToken && await bcrypt.compare(token, user.resetPasswordToken)) {
-                userToUpdate = user;
-                break;
-            }
-        }
-        
-        if (!userToUpdate) {
-            return { success: false, message: "Invalid or expired password reset token." };
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await users.updateOne(
-            { _id: userToUpdate._id },
-            { 
-                $set: { password: hashedPassword },
-                $unset: { resetPasswordToken: "", resetPasswordExpires: "" }
-            }
-        );
-
-        return { success: true, message: "Password has been reset successfully." };
-    } catch (error) {
-        console.error("resetPassword error:", error);
-        return { success: false, message: "An unexpected error occurred." };
+    if (!userToUpdate) {
+      return { success: false, message: 'Invalid or expired password reset token.' };
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await users.updateOne(
+      { _id: userToUpdate._id },
+      {
+        $set: { password: hashedPassword },
+        $unset: { resetPasswordToken: '', resetPasswordExpires: '' },
+      }
+    );
+
+    return { success: true, message: 'Password has been reset successfully.' };
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    return { success: false, message: 'An unexpected error occurred.' };
+  }
 }
-
-    
