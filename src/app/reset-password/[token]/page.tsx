@@ -96,7 +96,7 @@ export default function ResetPasswordPage() {
                     </FormItem>
                 )}
                 />
-                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground text-base font-bold py-6" disabled={isSubmitting}>
+                <Button type="submit" className="w-full text-base font-bold py-6" disabled={isSubmitting}>
                 {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Reset Password"}
                 </Button>
             </form>

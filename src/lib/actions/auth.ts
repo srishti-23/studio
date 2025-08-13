@@ -101,7 +101,7 @@ const passwordResetTemplate = (name: string, url: string) => `
     <h2>AdFleek Password Reset Request</h2>
     <p>Hello ${name},</p>
     <p>We received a request to reset your password. Please click the link below to set a new password:</p>
-    <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 20px;">Reset Password</a>
+    <a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #4A4A4A; color: #ffffff; text-decoration: none; border-radius: 5px; margin-top: 20px;">Reset Password</a>
     <p style="margin-top: 20px;">This link is valid for 1 hour. If you did not request a password reset, please ignore this email.</p>
   </div>
 `;
@@ -318,11 +318,12 @@ export async function sendPasswordResetLink(email: string) {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(token, 10);
     const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await users.updateOne(
       { _id: user._id },
-      { $set: { resetPasswordToken: token, resetPasswordExpires } }
+      { $set: { resetPasswordToken: hashedToken, resetPasswordExpires } }
     );
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
@@ -351,39 +352,50 @@ export async function sendPasswordResetLink(email: string) {
 
 
 export async function resetPassword(values: z.infer<typeof passwordResetSchema>) {
-  const validation = passwordResetSchema.safeParse(values);
-  if (!validation.success) {
-    const issues = validation.error.issues.map(issue => issue.message).join(' ');
-    return { success: false, message: `Invalid input: ${issues}` };
-  }
-
-  try {
-    const { password, token } = values;
-    const client = await clientPromise;
-    const db = client.db('adfleek');
-    const users = db.collection('users');
-
-    const userToUpdate = await users.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: new Date() },
-    });
-
-    if (!userToUpdate) {
-      return { success: false, message: 'Invalid or expired password reset token.' };
+    const validation = passwordResetSchema.safeParse(values);
+    if (!validation.success) {
+        const issues = validation.error.issues.map(issue => issue.message).join(' ');
+        return { success: false, message: `Invalid input: ${issues}` };
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await users.updateOne(
-      { _id: userToUpdate._id },
-      {
-        $set: { password: hashedPassword },
-        $unset: { resetPasswordToken: '', resetPasswordExpires: '' },
-      }
-    );
+    try {
+        const { password, token } = values;
+        const client = await clientPromise;
+        const db = client.db('adfleek');
+        const users = db.collection('users');
 
-    return { success: true, message: 'Password has been reset successfully.' };
-  } catch (error) {
-    console.error('resetPassword error:', error);
-    return { success: false, message: 'An unexpected error occurred.' };
-  }
+        // Find users with a potentially valid token (non-expired)
+        const potentialUsers = await users.find({
+            resetPasswordExpires: { $gt: new Date() },
+        }).toArray();
+
+        let userToUpdate = null;
+        for (const user of potentialUsers) {
+            if (user.resetPasswordToken) {
+                const tokenMatch = await bcrypt.compare(token, user.resetPasswordToken);
+                if (tokenMatch) {
+                    userToUpdate = user;
+                    break;
+                }
+            }
+        }
+
+        if (!userToUpdate) {
+            return { success: false, message: 'Invalid or expired password reset token.' };
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await users.updateOne(
+            { _id: userToUpdate._id },
+            {
+                $set: { password: hashedPassword },
+                $unset: { resetPasswordToken: '', resetPasswordExpires: '' },
+            }
+        );
+
+        return { success: true, message: 'Password has been reset successfully.' };
+    } catch (error) {
+        console.error('resetPassword error:', error);
+        return { success: false, message: 'An unexpected error occurred.' };
+    }
 }
