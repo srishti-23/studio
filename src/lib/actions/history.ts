@@ -4,7 +4,6 @@
 import { revalidatePath } from 'next/cache';
 import clientPromise from '@/lib/mongodb';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
 import { ObjectId } from 'mongodb';
 
 const messageSchema = z.object({
@@ -18,32 +17,16 @@ const messageSchema = z.object({
   createdAt: z.date().optional(),
 });
 
-function getAuthUser() {
-  const userCookie = cookies().get('user');
-  if (!userCookie) return null;
-
-  try {
-    const user = JSON.parse(userCookie.value);
-    if (!user || !user.id) return null;
-    return user as { id: string; email?: string; name?: string };
-  } catch {
-    return null;
-  }
-}
 
 export async function createConversation(
   firstMessage: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
-  const user = getAuthUser();
-  if (!user) return { success: false, message: 'User not authenticated.' };
-
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
     const conversationsCollection = db.collection('conversations');
 
     const newConversation = {
-      userId: new ObjectId(user.id),
       title: firstMessage.prompt,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -68,8 +51,6 @@ export async function addMessageToConversation(
   conversationId: string,
   message: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
-  const user = getAuthUser();
-  if (!user) return { success: false, message: 'User not authenticated.' };
 
   try {
     const client = await clientPromise;
@@ -79,7 +60,7 @@ export async function addMessageToConversation(
     const newMessage = { ...message, id: Date.now(), createdAt: new Date() };
 
     const result = await conversationsCollection.updateOne(
-      { _id: new ObjectId(conversationId), userId: new ObjectId(user.id) },
+      { _id: new ObjectId(conversationId) },
       {
         $push: { messages: newMessage },
         $set: { updatedAt: new Date() },
@@ -87,7 +68,7 @@ export async function addMessageToConversation(
     );
 
     if (result.matchedCount === 0) {
-      return { success: false, message: 'Conversation not found or access denied.' };
+      return { success: false, message: 'Conversation not found.' };
     }
 
     revalidatePath('/');
@@ -100,9 +81,6 @@ export async function addMessageToConversation(
 }
 
 export async function getConversations() {
-  const user = getAuthUser();
-  if (!user) return { success: false, message: 'User not authenticated.', conversations: [] };
-
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
@@ -110,7 +88,7 @@ export async function getConversations() {
 
     const conversations = await conversationsCollection
       .find(
-        { userId: new ObjectId(user.id) },
+        {},
         {
           projection: {
             _id: 1,
@@ -142,9 +120,6 @@ export async function getConversations() {
 }
 
 export async function getConversationById(conversationId: string) {
-  const user = getAuthUser();
-  if (!user) return { success: false, message: 'User not authenticated.' };
-
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
@@ -152,11 +127,10 @@ export async function getConversationById(conversationId: string) {
 
     const conversation = await conversationsCollection.findOne({
       _id: new ObjectId(conversationId),
-      userId: new ObjectId(user.id),
     });
 
     if (!conversation) {
-      return { success: false, message: 'Conversation not found or you do not have access.' };
+      return { success: false, message: 'Conversation not found.' };
     }
 
     return { success: true, conversation: JSON.parse(JSON.stringify(conversation)) };
