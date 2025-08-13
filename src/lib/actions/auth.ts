@@ -318,12 +318,12 @@ export async function sendPasswordResetLink(email: string) {
     }
 
     const token = crypto.randomBytes(32).toString('hex');
-    const hashedToken = await bcrypt.hash(token, 10);
+    const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
     const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await users.updateOne(
       { _id: user._id },
-      { $set: { resetPasswordToken: hashedToken, resetPasswordExpires } }
+      { $set: { resetPasswordToken, resetPasswordExpires } }
     );
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
@@ -360,25 +360,16 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
 
     try {
         const { password, token } = values;
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
         const client = await clientPromise;
         const db = client.db('adfleek');
         const users = db.collection('users');
 
-        // Find users with a potentially valid token (non-expired)
-        const potentialUsers = await users.find({
+        const userToUpdate = await users.findOne({
+            resetPasswordToken: hashedToken,
             resetPasswordExpires: { $gt: new Date() },
-        }).toArray();
-
-        let userToUpdate = null;
-        for (const user of potentialUsers) {
-            if (user.resetPasswordToken) {
-                const tokenMatch = await bcrypt.compare(token, user.resetPasswordToken);
-                if (tokenMatch) {
-                    userToUpdate = user;
-                    break;
-                }
-            }
-        }
+        });
 
         if (!userToUpdate) {
             return { success: false, message: 'Invalid or expired password reset token.' };

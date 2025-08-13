@@ -29,7 +29,7 @@ export default function ResetPasswordPage() {
   const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
-  const token = Array.isArray(params.token) ? params.token[0] : params.token;
+  const token = params.token as string;
 
 
   const form = useForm<z.infer<typeof formSchema>>({
