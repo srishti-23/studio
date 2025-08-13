@@ -1,4 +1,6 @@
 
+"use client";
+
 import { Suspense } from "react";
 import type { Metadata } from 'next';
 import AnimatedBackground from "@/components/layout/animated-background";
@@ -11,17 +13,15 @@ import AppSidebar from "@/components/layout/app-sidebar";
 import WorkspaceHeader from "@/components/workspace/workspace-header";
 import WorkspaceClient from "@/components/workspace/workspace-client";
 import PromptForm from "@/components/home/prompt-form";
+import { useRouter } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: 'Workspace - AdFleek.io',
-  description: 'Your creative workspace.',
-};
 
 export default function WorkspacePage({
   searchParams,
 }: {
   searchParams: { [key:string]: string | string[] | undefined };
 }) {
+  const router = useRouter();
   const prompt = Array.isArray(searchParams.prompt)
     ? searchParams.prompt[0]
     : searchParams.prompt || "";
@@ -48,11 +48,15 @@ export default function WorkspacePage({
     isRefinement: false,
   }];
 
+  const handleNewChat = () => {
+    router.push('/');
+  }
+
   return (
     <SidebarProvider>
       <AnimatedBackground />
       <Sidebar side="left" variant="floating" collapsible="offcanvas" className="border-r border-sidebar-border">
-        <AppSidebar onNewChat={() => {}}/>
+        <AppSidebar onNewChat={handleNewChat}/>
       </Sidebar>
       <SidebarInset className="relative flex flex-col min-h-screen">
         <WorkspaceHeader />
@@ -66,7 +70,13 @@ export default function WorkspacePage({
             />
           </Suspense>
         </main>
-        <PromptForm initialPrompt={prompt} onGenerate={() => {}} isSubmitting={false} selectedImage={null} />
+        <PromptForm 
+          initialPrompt={prompt} 
+          onGenerate={() => {}} 
+          isSubmitting={false} 
+          selectedImage={null}
+          onCancel={() => {}} 
+        />
       </SidebarInset>
     </SidebarProvider>
   );
