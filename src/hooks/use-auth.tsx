@@ -28,54 +28,55 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Check for an existing cookie session first
-    getCurrentUser().then(cookieUser => {
-        if (cookieUser) {
-            setUser(cookieUser);
-        }
-    }).finally(() => {
-        // Then, set up the Firebase listener.
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-          setIsLoading(true);
-          if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-            // User is signed in with Firebase. Ensure they exist in our database and set the cookie.
-            const result = await findOrCreateUserFromGoogle({
-              email: firebaseUser.email,
-              name: firebaseUser.displayName,
-              uid: firebaseUser.uid,
-            });
-    
-            if (result.success && result.user) {
-              setUser(result.user); 
-              await setCurrentUser(result.user);
-            } else {
-              // If we can't get a user from our DB, something is wrong. Sign out.
-              await fbSignOut(auth);
-              setUser(null);
-              await serverLogout();
-            }
-          } else {
-            // User is signed out from Firebase, but might still have a cookie session
-            // from email/password login. Let's re-verify the cookie.
-            const stillLoggedInUser = await getCurrentUser();
-            if (!stillLoggedInUser) {
-              setUser(null); // No firebase user, no cookie. Definitely logged out.
-            }
-          }
-          setIsLoading(false);
-        });
-        
-        // Initial loading is done after both cookie check and Firebase listener are ready.
-        if (isLoading) setIsLoading(false);
-
-        // Cleanup subscription on unmount
-        return () => unsubscribe();
+    // This effect runs once on mount to check for an existing session from the cookie.
+    // It establishes the initial auth state.
+    getCurrentUser().then(userFromCookie => {
+      if (userFromCookie) {
+        setUser(userFromCookie);
+      }
+      setIsLoading(false);
     });
+
+    // Firebase listener for client-side auth changes (e.g. Google Sign-In)
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+        // User signed in with Google on the client.
+        // We ensure a server session (cookie) is created/updated for them.
+        setIsLoading(true);
+        const result = await findOrCreateUserFromGoogle({
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          uid: firebaseUser.uid,
+        });
+
+        if (result.success && result.user) {
+          setUser(result.user); // Update client state
+          // Server cookie is now set by findOrCreateUserFromGoogle, so server actions will work.
+        } else {
+           console.error("Failed to find or create user from Google Sign-In.");
+           await fbSignOut(auth);
+           setUser(null);
+        }
+        setIsLoading(false);
+      } else {
+        // This handles when a user signs out via Firebase methods, but the cookie might still exist.
+        // The `logout` function is the primary way to sign out, which clears both.
+        // If they are not the same, we trust the server-side session.
+        const userFromCookie = await getCurrentUser();
+        if (!userFromCookie) {
+            setUser(null);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
+
   const login = (userData: User) => {
+    // This function is called after successful email/password login.
+    // The server action has already set the cookie. We just update the client state.
     setUser(userData);
-    // The cookie is already set by the server action that performs the login
   };
 
   const logout = async () => {
@@ -85,15 +86,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       console.error("Firebase sign out failed, continuing with server logout.", e);
     }
-    try {
-      await serverLogout(); // Sign out from server (clear cookie)
-      setUser(null);
-      router.push("/login");
-    } catch (e) {
-      console.error("Logout failed", e);
-    } finally {
-        setIsLoading(false);
-    }
+    await serverLogout(); // Sign out from server (clear cookie)
+    setUser(null); // Clear client state
+    router.push("/login");
+    setIsLoading(false);
   };
 
   return (

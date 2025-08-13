@@ -65,23 +65,15 @@ export async function getCurrentUser() {
     if (!userCookie) return null;
     try {
         const userData = JSON.parse(userCookie.value);
-        if (!userData || !userData.id) return null;
-        
-        // Optionally re-validate against the database
-        const client = await clientPromise;
-        const db = client.db('adfleek');
-        const users = db.collection('users');
-        const user = await users.findOne({ _id: new ObjectId(userData.id) });
-
-        if (!user) {
-            // Cookie is invalid, clear it
-            cookies().set('user', '', { path: '/', maxAge: 0 });
-            return null;
+        // Basic validation of the cookie payload
+        if (!userData || !userData.id || !userData.email || !userData.name) {
+             cookies().set('user', '', { path: '/', maxAge: 0 }); // Clear malformed cookie
+             return null;
         }
-        
-        return { id: user._id.toString(), email: user.email, name: user.name };
-
+        return userData as { id: string; email: string; name: string };
     } catch (e) {
+        // Clear cookie if parsing fails
+        cookies().set('user', '', { path: '/', maxAge: 0 });
         return null;
     }
 }
@@ -321,6 +313,8 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     }
 
     const u = { id: user._id.toString(), email: user.email, name: user.name };
+    // This is the crucial step: set the server-side cookie for Google Sign-In users
+    setUserCookie(u);
     return { success: true, user: u };
   } catch (error) {
     console.error('Google user handling error:', error);
@@ -356,10 +350,10 @@ export async function sendPasswordResetLink(email: string) {
 
     const h = headers();
     const proto = h.get('x-forwarded-proto') || 'http';
-    const host = h.get('host') || 'localhost:9002';
-
+    const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:9002';
+    
     const base = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
-
+    
     const resetUrl = `${base}/reset-password/${token}`;
 
     const transporter = getTransporter();
@@ -408,9 +402,11 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
             return { success: false, message: 'Invalid or expired password reset token.' };
         }
 
-        const isPasswordSame = await bcrypt.compare(password, userToUpdate.password || '');
-        if(isPasswordSame) {
-            return { success: false, message: 'New password cannot be the same as the old password.' };
+        if (userToUpdate.password) {
+            const isPasswordSame = await bcrypt.compare(password, userToUpdate.password);
+            if(isPasswordSame) {
+                return { success: false, message: 'New password cannot be the same as the old password.' };
+            }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
