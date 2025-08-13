@@ -30,7 +30,7 @@ import Link from "next/link";
 import { Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getConversations } from "@/lib/actions/history";
 import { formatDistanceToNow } from 'date-fns';
@@ -49,10 +49,12 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const { toggleSidebar } = useSidebar();
-    const { user, logout } = useAuth();
+    const { user, logout, isLoading: isAuthLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const activeConversationId = searchParams.get('conversationId');
 
     useEffect(() => {
         if (user) {
@@ -66,8 +68,10 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                 .finally(() => {
                     setIsLoadingHistory(false);
                 });
+        } else {
+            setConversations([]);
         }
-    }, [user]);
+    }, [user, activeConversationId]);
     
     const handleNewChatClick = () => {
       onNewChat();
@@ -76,6 +80,9 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
 
   const handleConversationClick = (conversationId: string) => {
     router.push(`/?conversationId=${conversationId}`);
+    if (window.innerWidth < 768) { // Assuming md breakpoint
+        toggleSidebar();
+    }
   };
 
   return (
@@ -90,7 +97,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                 <X className="h-5 w-5" />
             </Button>
          </div>
-         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={handleNewChatClick}>
+         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={handleNewChatClick} disabled={!user}>
             <Plus className="mr-2 h-4 w-4" />
             New Chat
         </Button>
@@ -105,16 +112,16 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
             <SidebarMenu className="gap-0 p-4 pt-4">
             <SidebarGroup>
                 <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent History</SidebarGroupLabel>
-                {isLoadingHistory ? (
+                {isAuthLoading || (isLoadingHistory && user) ? (
                     <div className="space-y-4 px-2 mt-2">
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                         <Skeleton className="h-10 w-full" />
                     </div>
-                ) : conversations.length > 0 ? (
+                ) : user && conversations.length > 0 ? (
                     conversations.map(convo => (
                     <SidebarMenuItem key={convo._id} onClick={() => handleConversationClick(convo._id)}>
-                        <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={false}>
+                        <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={activeConversationId === convo._id}>
                             {convo.firstImageUrl ? (
                                 <Image src={convo.firstImageUrl} alt={convo.title} width={40} height={40} className="rounded-md bg-muted object-cover" data-ai-hint="advertisement design" />
                             ) : (
@@ -129,8 +136,10 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                     ))
-                ) : (
+                ) : user ? (
                     <p className="p-2 text-sm text-muted-foreground">No history yet.</p>
+                ) : (
+                     <p className="p-2 text-sm text-muted-foreground">Log in to see your history.</p>
                 )}
             </SidebarGroup>
             </SidebarMenu>
@@ -151,7 +160,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton>
                         <Avatar className="h-8 w-8">
-                            <AvatarImage src="https://placehold.co/40x40.png" alt="@user" />
+                            <AvatarImage src={undefined} alt={user.name || "User"} />
                             <AvatarFallback>{user.name?.[0].toUpperCase() ?? 'U'}</AvatarFallback>
                         </Avatar>
                         <span>{user.name}</span>
@@ -169,9 +178,9 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                 <SidebarMenuButton asChild>
                     <Link href="/login">
                         <Avatar className="h-8 w-8">
-                            <AvatarFallback>U</AvatarFallback>
+                            <AvatarFallback>G</AvatarFallback>
                         </Avatar>
-                        <span>Guest User</span>
+                        <span>Guest</span>
                     </Link>
                 </SidebarMenuButton>
             )}

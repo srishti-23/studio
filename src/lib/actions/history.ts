@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import clientPromise from '@/lib/mongodb';
 import { z } from 'zod';
 import { ObjectId } from 'mongodb';
+import { getCurrentUser } from './auth';
 
 const messageSchema = z.object({
   id: z.number(),
@@ -21,12 +22,18 @@ const messageSchema = z.object({
 export async function createConversation(
   firstMessage: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, message: 'User not authenticated.' };
+  }
+
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
     const conversationsCollection = db.collection('conversations');
 
     const newConversation = {
+      userId: new ObjectId(user.id),
       title: firstMessage.prompt,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -51,6 +58,10 @@ export async function addMessageToConversation(
   conversationId: string,
   message: Omit<z.infer<typeof messageSchema>, 'id' | 'createdAt'>
 ) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, message: 'User not authenticated.' };
+  }
 
   try {
     const client = await clientPromise;
@@ -60,7 +71,7 @@ export async function addMessageToConversation(
     const newMessage = { ...message, id: Date.now(), createdAt: new Date() };
 
     const result = await conversationsCollection.updateOne(
-      { _id: new ObjectId(conversationId) },
+      { _id: new ObjectId(conversationId), userId: new ObjectId(user.id) },
       {
         $push: { messages: newMessage },
         $set: { updatedAt: new Date() },
@@ -68,7 +79,7 @@ export async function addMessageToConversation(
     );
 
     if (result.matchedCount === 0) {
-      return { success: false, message: 'Conversation not found.' };
+      return { success: false, message: 'Conversation not found or user unauthorized.' };
     }
 
     revalidatePath('/');
@@ -81,6 +92,11 @@ export async function addMessageToConversation(
 }
 
 export async function getConversations() {
+  const user = await getCurrentUser();
+  if (!user) {
+      return { success: true, conversations: [] }; // Return empty array if not logged in
+  }
+
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
@@ -88,12 +104,13 @@ export async function getConversations() {
 
     const conversations = await conversationsCollection
       .find(
-        {},
+        { userId: new ObjectId(user.id) },
         {
           projection: {
             _id: 1,
             title: 1,
             createdAt: 1,
+            updatedAt: 1,
             'messages.imageUrls': { $slice: 1 },
           },
         }
@@ -120,6 +137,11 @@ export async function getConversations() {
 }
 
 export async function getConversationById(conversationId: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, message: 'User not authenticated.' };
+  }
+
   try {
     const client = await clientPromise;
     const db = client.db('adfleek');
@@ -127,10 +149,11 @@ export async function getConversationById(conversationId: string) {
 
     const conversation = await conversationsCollection.findOne({
       _id: new ObjectId(conversationId),
+      userId: new ObjectId(user.id),
     });
 
     if (!conversation) {
-      return { success: false, message: 'Conversation not found.' };
+      return { success: false, message: 'Conversation not found or user unauthorized.' };
     }
 
     return { success: true, conversation: JSON.parse(JSON.stringify(conversation)) };

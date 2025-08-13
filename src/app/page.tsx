@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from 'next/navigation';
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
@@ -29,7 +29,7 @@ interface Generation {
 }
 
 function HomePageContent() {
-    const { user } = useAuth();
+    const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -41,31 +41,48 @@ function HomePageContent() {
     const [generations, setGenerations] = useState<Generation[]>([]);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [promptForRefinement, setPromptForRefinement] = useState("");
-    const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl);
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+
+    const handleNewChat = useCallback(() => {
+        setIsGenerating(false);
+        setIsSubmitting(false);
+        setShowImageGrid(true); 
+        setGenerations([]);
+        setSelectedImage(null);
+        setPromptForRefinement("");
+        setActiveConversationId(null);
+        if (conversationIdFromUrl) {
+            router.push('/');
+        }
+    }, [conversationIdFromUrl, router]);
 
     useEffect(() => {
         if (conversationIdFromUrl) {
             if (conversationIdFromUrl !== activeConversationId) {
                 setActiveConversationId(conversationIdFromUrl);
+                setIsLoadingConversation(true);
+                setIsGenerating(true);
+                setShowImageGrid(false);
+
+                getConversationById(conversationIdFromUrl).then(result => {
+                    if (result.success && result.conversation) {
+                        setGenerations(result.conversation.messages);
+                    } else {
+                        toast({
+                            variant: "destructive",
+                            title: "Load Error",
+                            description: result.message || "Could not load conversation.",
+                        });
+                        handleNewChat();
+                    }
+                    setIsLoadingConversation(false);
+                });
             }
-            setIsGenerating(true);
-            setShowImageGrid(false);
-            getConversationById(conversationIdFromUrl).then(result => {
-                if (result.success && result.conversation) {
-                    setGenerations(result.conversation.messages);
-                } else {
-                    toast({
-                        variant: "destructive",
-                        title: "Load Error",
-                        description: result.message || "Could not load conversation.",
-                    });
-                    handleNewChat();
-                }
-            });
         } else {
            handleNewChat();
         }
-    }, [conversationIdFromUrl]);
+    }, [conversationIdFromUrl, activeConversationId, handleNewChat, toast]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -86,15 +103,19 @@ function HomePageContent() {
                 title: "Authentication Error",
                 description: "You must be logged in to start a chat.",
             });
+            router.push('/login');
             return;
         }
 
-        setIsGenerating(true);
         setIsSubmitting(true);
-        setShowImageGrid(false);
+        if (!activeConversationId) {
+            setIsGenerating(true);
+            setShowImageGrid(false);
+        }
 
         const isRefinement = selectedImage !== null;
         const newVariations = isRefinement ? 1 : data.variations;
+        // This is a placeholder. In a real app, you'd get this from an AI service.
         const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
 
         const newGeneration: Omit<Generation, 'id'> = {
@@ -106,6 +127,7 @@ function HomePageContent() {
           refinedFrom: isRefinement ? selectedImage : undefined,
         };
         
+        // Optimistically update UI
         setGenerations(prev => [...prev, {...newGeneration, id: Date.now() }]);
         setSelectedImage(null); 
         setPromptForRefinement(data.prompt); 
@@ -116,8 +138,9 @@ function HomePageContent() {
         } else {
             result = await createConversation(newGeneration);
             if (result.success && result.conversationId) {
-                setActiveConversationId(result.conversationId);
+                // IMPORTANT: Update URL to reflect the new conversation ID
                 router.push(`/?conversationId=${result.conversationId}`);
+                setActiveConversationId(result.conversationId);
             }
         }
 
@@ -127,24 +150,16 @@ function HomePageContent() {
                 title: "History Error",
                 description: result.message,
             });
+            // Optional: revert optimistic update if save fails
+            setGenerations(prev => prev.slice(0, -1));
         }
+
+        // This would be replaced by a real check on the AI generation status
+        setTimeout(() => setIsSubmitting(false), 2000); 
     };
     
     const handleGenerationComplete = () => {
         setIsSubmitting(false);
-    };
-
-    const handleNewChat = () => {
-        setIsGenerating(false);
-        setIsSubmitting(false);
-        setShowImageGrid(true); // show grid on new chat
-        setGenerations([]);
-        setSelectedImage(null);
-        setPromptForRefinement("");
-        setActiveConversationId(null);
-        if (conversationIdFromUrl) {
-            router.push('/');
-        }
     };
     
     const handleImageSelect = (imageUrl: string, prompt: string) => {
@@ -159,6 +174,7 @@ function HomePageContent() {
 
     const handleCancel = () => {
       setIsSubmitting(false);
+      setSelectedImage(null);
     };
     
     const lastGenerationPrompt = generations.length > 0 ? generations[generations.length - 1].prompt : "";
@@ -173,12 +189,13 @@ function HomePageContent() {
       <SidebarInset className="relative flex flex-col min-h-screen">
         <Header onNewChat={handleNewChat} />
         <main className="flex-1 px-4 py-8 lg:px-8">
-            {isGenerating ? (
+            {isGenerating || isLoadingConversation ? (
                 <WorkspaceClient 
                     generations={generations}
                     onGenerationComplete={handleGenerationComplete}
                     onImageSelect={handleImageSelect}
                     onRegenerate={handleRegenerate}
+                    isLoading={isLoadingConversation || (isGenerating && generations.length === 0)}
                 />
             ) : (
                 <>

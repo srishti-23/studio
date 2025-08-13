@@ -29,6 +29,7 @@ interface WorkspaceClientProps {
   onGenerationComplete: () => void;
   onImageSelect: (imageUrl: string, prompt: string) => void;
   onRegenerate: (data: { prompt: string; aspectRatio: string; variations: number }) => void;
+  isLoading: boolean;
 }
 
 const WorkspaceSkeleton = () => (
@@ -93,7 +94,7 @@ const GenerationBlock = ({
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
   const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : (generation.refinedFrom ?? generation.imageUrls[0]));
-  const [activeStep, setActiveStep] = useState(2);
+  const [activeStep, setActiveStep] = useState(isLast ? 2 : 4);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
@@ -111,7 +112,7 @@ const GenerationBlock = ({
         if (generation.isRefinement) {
             setMainImage(generation.imageUrls[0])
         }
-      }, 3000); // Simulate generation time
+      }, 2000); // Simulate generation time
     } else {
         setIsLoading(false);
         setActiveStep(4); // All done
@@ -209,10 +210,6 @@ const GenerationBlock = ({
       default: return 'aspect-square';
     }
   };
-
-  if (isLoading && isLast) {
-    return <WorkspaceSkeleton />;
-  }
   
   const displayImage = mainImage;
 
@@ -234,34 +231,42 @@ const GenerationBlock = ({
                 )}
             </div>
           <Card className={cn("w-full overflow-hidden shadow-2xl shadow-black/50 relative group max-w-2xl", getAspectRatioClass(generation.aspectRatio))}>
-            <Image
-              src={displayImage!}
-              alt="Main generated image"
-              fill
-              className="object-contain w-full h-full"
-              data-ai-hint="advertisement creative"
-            />
-             {isLast && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex justify-between items-center">
-                        <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('liked')}>
-                                <ThumbsUp className={cn(feedback === 'liked' && "fill-current")} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('disliked')}>
-                                <ThumbsDown className={cn(feedback === 'disliked' && "fill-current")} />
-                            </Button>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleCopy}>
-                                <Copy />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleDownload}>
-                                <Download />
-                            </Button>
+            {isLoading ? (
+                <div className="flex-1 flex items-center justify-center bg-muted/50 w-full h-full">
+                    <LoaderCircle className="h-12 w-12 text-muted-foreground animate-spin" />
+                </div>
+            ) : (
+                <>
+                <Image
+                src={displayImage!}
+                alt="Main generated image"
+                fill
+                className="object-contain w-full h-full"
+                data-ai-hint="advertisement creative"
+                />
+                {isLast && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex justify-between items-center">
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('liked')}>
+                                    <ThumbsUp className={cn(feedback === 'liked' && "fill-current")} />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={() => handleFeedback('disliked')}>
+                                    <ThumbsDown className={cn(feedback === 'disliked' && "fill-current")} />
+                                </Button>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleCopy}>
+                                    <Copy />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white" onClick={handleDownload}>
+                                    <Download />
+                                </Button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
+                </>
             )}
           </Card>
         </div>
@@ -318,8 +323,13 @@ export default function WorkspaceClient({
   onGenerationComplete,
   onImageSelect,
   onRegenerate,
+  isLoading,
 }: WorkspaceClientProps) {
   
+  if (isLoading) {
+      return <WorkspaceSkeleton />
+  }
+
   return (
     <div className="flex flex-col gap-8">
       {generations.map((gen, index) => (
@@ -335,7 +345,3 @@ export default function WorkspaceClient({
     </div>
   );
 }
-
-    
-
-    
