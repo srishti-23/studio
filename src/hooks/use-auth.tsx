@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { findOrCreateUserFromGoogle } from "@/lib/actions/auth";
+import { findOrCreateUserFromGoogle, setCurrentUser, logout as serverLogout } from "@/lib/actions/auth";
 
 interface User {
   id: string;
@@ -40,14 +40,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (result.success && result.user) {
           setUser(result.user); // Set our app's user object
+          // Also set the server-side cookie for actions
+          await setCurrentUser(result.user);
         } else {
           // If we can't get a user from our DB, something is wrong. Sign out.
           await fbSignOut(auth);
           setUser(null);
+          await serverLogout();
         }
       } else {
         // User is signed out.
         setUser(null);
+        // Ensure server cookie is also cleared if firebase session ends
+        await serverLogout();
       }
       setIsLoading(false);
     });
@@ -57,15 +62,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
 
-  // This function is now only for manual, email/password login flow
+  // This function is for manual, email/password login flow
   const login = (userData: User) => {
     setUser(userData);
+    // The cookie is already set by the server action that performs the login
   };
 
   const logout = async () => {
     setIsLoading(true);
     try {
-      await fbSignOut(auth);
+      await fbSignOut(auth); // Sign out from firebase client
+      await serverLogout(); // Sign out from server (clear cookie)
       setUser(null);
       router.push("/login");
     } catch (e) {

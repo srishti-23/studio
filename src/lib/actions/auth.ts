@@ -54,8 +54,12 @@ function setUserCookie(user: {id: string, name: string, email: string}) {
   });
 }
 
-// NOTE: This function is only used for the classic email/password login flow.
-// Firebase client-side auth state is the source of truth for Google Sign-in.
+export async function setCurrentUser(user: {id: string, name: string, email: string}) {
+    setUserCookie(user);
+    return { success: true };
+}
+
+
 export async function getCurrentUser() {
     const userCookie = cookies().get('user');
     if (!userCookie) return null;
@@ -67,7 +71,7 @@ export async function getCurrentUser() {
     }
 }
 
-// NOTE: This function is only used for the classic email/password login flow.
+
 export async function logout() {
   cookies().set('user', '', { path: '/', maxAge: 0 });
   return { success: true };
@@ -296,7 +300,7 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     }
 
     const u = { id: user._id.toString(), email: user.email, name: user.name };
-    // No longer setting cookie here; client-side Firebase session is the source of truth
+    // Cookie will now be set from the client-side hook
 
     return { success: true, user: u };
   } catch (error) {
