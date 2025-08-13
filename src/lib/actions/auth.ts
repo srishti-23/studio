@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { ObjectId } from 'mongodb';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 // --- SCHEMAS ---
 const signupSchema = z.object({
@@ -316,10 +316,12 @@ export async function sendPasswordResetLink(email: string) {
     const users = db.collection('users');
 
     const user = await users.findOne({ email });
+    // Always return success to avoid email enumeration
     if (!user) {
       return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
 
+    // Generate token (plain) and store SHA-256 hash + expiry
     const token = crypto.randomBytes(32).toString('hex');
     const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
     const resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
@@ -329,7 +331,19 @@ export async function sendPasswordResetLink(email: string) {
       { $set: { resetPasswordToken, resetPasswordExpires } }
     );
 
-    const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+    // --------- AUTO-DETECT BASE URL SAFELY ----------
+    const h = headers();
+    const proto = h.get('x-forwarded-proto') || 'http';
+    const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:3000';
+
+    // Prefer explicit env if present, else use detected
+    const base =
+      process.env.NEXT_PUBLIC_APP_URL &&
+      process.env.NEXT_PUBLIC_APP_URL.trim().length > 0
+        ? process.env.NEXT_PUBLIC_APP_URL
+        : `${proto}://${host}`;
+    // ------------------------------------------------
+
     const resetUrl = `${base}/reset-password/${token}`;
 
     const transporter = getTransporter();
@@ -341,6 +355,7 @@ export async function sendPasswordResetLink(email: string) {
         html: passwordResetTemplate(user.name || 'there', resetUrl),
       });
     } else {
+      // Dev: no SMTP setup
       console.log('--- EMAIL SENDING SKIPPED (NO CREDENTIALS) ---');
       console.log(`Password reset link for ${email}: ${resetUrl}`);
       console.log('-------------------------------------------------');
