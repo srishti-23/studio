@@ -333,7 +333,7 @@ export async function sendPasswordResetLink(email: string) {
     const users = db.collection('users');
 
     const user = await users.findOne({ email });
-    // Always return success to avoid email enumeration
+    // Always act successful to avoid email enumeration
     if (!user) {
       return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
@@ -348,13 +348,21 @@ export async function sendPasswordResetLink(email: string) {
       { $set: { resetPasswordToken, resetPasswordExpires } }
     );
 
+    // ---------- Build base URL robustly ----------
     const h = headers();
     const proto = h.get('x-forwarded-proto') || 'http';
-    const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:9002';
-    
-    const base = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
-    
+    const host  = h.get('x-forwarded-host') || h.get('host') || 'localhost:3000';
+
+    // If you set NEXT_PUBLIC_APP_URL, we’ll use it **only if it looks sane**.
+    const envBase = (process.env.NEXT_PUBLIC_APP_URL || '').trim();
+    const base =
+      envBase.startsWith('http://') || envBase.startsWith('https://')
+        ? envBase
+        : `${proto}://${host}`;
+    // ---------------------------------------------
+
     const resetUrl = `${base}/reset-password/${token}`;
+    console.log('[sendPasswordResetLink] resetUrl =>', resetUrl); // verify in server console
 
     const transporter = getTransporter();
     if (transporter) {
@@ -365,6 +373,7 @@ export async function sendPasswordResetLink(email: string) {
         html: passwordResetTemplate(user.name || 'there', resetUrl),
       });
     } else {
+      // Dev: no SMTP configured
       console.log('--- EMAIL SENDING SKIPPED (NO CREDENTIALS) ---');
       console.log(`Password reset link for ${email}: ${resetUrl}`);
       console.log('-------------------------------------------------');
