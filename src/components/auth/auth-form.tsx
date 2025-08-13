@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { signupUser, loginUser, findOrCreateUserFromGoogle, sendVerificationOtp } from "@/lib/actions/auth";
+import { signupUser, loginUser, sendVerificationOtp } from "@/lib/actions/auth";
 import { auth } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import OtpInput from "./otp-input";
@@ -56,7 +56,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const isLogin = mode === "login";
 
   // State for signup flow
@@ -75,6 +75,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
       ...(isLogin ? {} : { name: "" }),
     },
   });
+  
+  useEffect(() => {
+    // If user becomes available (e.g. from Google Sign In), redirect to home
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -90,7 +98,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       const result = await loginUser(values);
       if (result.success && result.user) {
-        login(result.user);
+        login(result.user); // Sets user for cookie-based session
         toast({ title: "Login Successful", description: "Welcome back!" });
         router.push("/");
       } else {
@@ -157,27 +165,10 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const { user } = result;
-
-      if (user.email && user.displayName && user.uid) {
-        const dbResult = await findOrCreateUserFromGoogle({
-            email: user.email,
-            name: user.displayName,
-            uid: user.uid,
-        });
-
-        if (dbResult.success && dbResult.user) {
-            login(dbResult.user);
-            toast({ title: "Login Successful", description: `Welcome, ${dbResult.user.name}!` });
-            router.push('/');
-        } else {
-            toast({ variant: "destructive", title: "Sign-In Failed", description: dbResult.message });
-        }
-      } else {
-        toast({ variant: "destructive", title: "Sign-In Failed", description: "Could not retrieve user information from Google." });
-      }
-
+      // The onAuthStateChanged listener in useAuth will handle the redirect
+      await signInWithPopup(auth, provider);
+      toast({ title: "Sign-In Successful", description: "Welcome!"});
+      // The useEffect hook will now handle the redirect
     } catch (error: any) {
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });

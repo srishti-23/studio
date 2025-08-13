@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { findOrCreateUserFromGoogle, getCurrentUser, logout as serverLogout } from "@/lib/actions/auth";
+import { findOrCreateUserFromGoogle } from "@/lib/actions/auth";
 
 interface User {
   id: string;
@@ -15,8 +15,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (user: User) => void;   // sets client state only
-  logout: () => Promise<void>;   // calls server to clear cookie
+  login: (user: User) => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -27,53 +27,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // 1) Hydrate from server httpOnly cookie on first load/refresh
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-
-    (async () => {
-      try {
-        const serverUser = await getCurrentUser();
-        if (serverUser) setUser(serverUser);
-      } finally {
-        setIsLoading(false);
-        // 2) Then attach Firebase listener (for Google sign-in path only)
-        unsub = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-          // If we already have an app user, we’re good.
-          if (user) return;
-
-          if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-            setIsLoading(true);
-            // Make sure user exists in our DB and httpOnly cookie is set by the server action.
-            const result = await findOrCreateUserFromGoogle({
-              email: firebaseUser.email,
-              name: firebaseUser.displayName,
-              uid: firebaseUser.uid,
-            });
-            if (result?.success && result.user) {
-              setUser(result.user); // server action already set cookie; we only set state
-            } else {
-              await fbSignOut(auth).catch(() => {});
-              setUser(null);
-            }
-            setIsLoading(false);
-          } else {
-            // No Firebase user — do NOT try to delete server cookie here.
-            // Server cookie is managed by server actions (login/logout).
-          }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setIsLoading(true);
+      if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+        // User is signed in with Firebase. Ensure they exist in our database.
+        const result = await findOrCreateUserFromGoogle({
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          uid: firebaseUser.uid,
         });
-        // If there is no firebase configured, ensure loading state ends.
-        if (!auth) setIsLoading(false);
-      }
-    })();
 
-    return () => {
-      if (unsub) unsub();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (result.success && result.user) {
+          setUser(result.user); // Set our app's user object
+        } else {
+          // If we can't get a user from our DB, something is wrong. Sign out.
+          await fbSignOut(auth);
+          setUser(null);
+        }
+      } else {
+        // User is signed out.
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
-  // Client-side login just sets local state (server action already set the cookie)
+
+  // This function is now only for manual, email/password login flow
   const login = (userData: User) => {
     setUser(userData);
   };
@@ -81,22 +65,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     setIsLoading(true);
     try {
-      // Clear httpOnly cookie on the server
-      await serverLogout();
+      await fbSignOut(auth);
+      setUser(null);
+      router.push("/login");
     } catch (e) {
-      // ignore
+      console.error("Logout failed", e);
+    } finally {
+        setIsLoading(false);
     }
-    try {
-      // If Firebase was used, also sign it out
-      if (auth.currentUser) {
-        await fbSignOut(auth);
-      }
-    } catch (e) {
-      // ignore
-    }
-    setUser(null);
-    router.push("/login");
-    setIsLoading(false);
   };
 
   return (

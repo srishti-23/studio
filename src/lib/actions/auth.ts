@@ -54,6 +54,8 @@ function setUserCookie(user: {id: string, name: string, email: string}) {
   });
 }
 
+// NOTE: This function is only used for the classic email/password login flow.
+// Firebase client-side auth state is the source of truth for Google Sign-in.
 export async function getCurrentUser() {
     const userCookie = cookies().get('user');
     if (!userCookie) return null;
@@ -65,6 +67,7 @@ export async function getCurrentUser() {
     }
 }
 
+// NOTE: This function is only used for the classic email/password login flow.
 export async function logout() {
   cookies().set('user', '', { path: '/', maxAge: 0 });
   return { success: true };
@@ -73,7 +76,7 @@ export async function logout() {
 // --- EMAIL HELPERS ---
 function getTransporter() {
   if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_SERVER_HOST) {
-    console.warn('Email credentials are not set in .env file. Email sending will be skipped.');
+    console.warn('Email credentials are not set in .env.local file. Email sending will be skipped.');
     return null;
   }
   return nodemailer.createTransport({
@@ -139,6 +142,8 @@ export async function sendVerificationOtp(email: string) {
       });
       return { success: true, message: 'OTP sent to your email.' };
     } else {
+      console.log('--- EMAIL SENDING SKIPPED ---');
+      console.log(`OTP for ${email}: ${otp}`);
       return { success: true, message: `OTP sent (testing): ${otp}`, otp };
     }
   } catch (error) {
@@ -202,7 +207,6 @@ export async function signupUser(values: z.infer<typeof signupSchema>, otp: stri
       return { success: false, message: 'Could not finalize user creation.' };
     }
 
-    // Create an empty library for the new user
     const librariesCollection = db.collection('libraries');
     await librariesCollection.insertOne({
       userId: finalUser._id,
@@ -292,7 +296,7 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     }
 
     const u = { id: user._id.toString(), email: user.email, name: user.name };
-    setUserCookie(u);
+    // No longer setting cookie here; client-side Firebase session is the source of truth
 
     return { success: true, user: u };
   } catch (error) {
@@ -313,7 +317,6 @@ export async function sendPasswordResetLink(email: string) {
 
     const user = await users.findOne({ email });
     if (!user) {
-      // Don't reveal if user exists for security reasons
       return { success: true, message: 'If an account with this email exists, a reset link has been sent.' };
     }
 
