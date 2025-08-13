@@ -53,7 +53,7 @@ export async function createConversation(
     const result = await conversationsCollection.insertOne(newConversation);
 
     revalidatePath('/');
-    revalidatePath('/?conversationId=*');
+    revalidatePath('/?conversationId=');
     return { success: true, conversationId: result.insertedId.toString() };
   } catch (error) {
     console.error('Create conversation error:', error);
@@ -91,7 +91,7 @@ export async function addMessageToConversation(
     }
 
     revalidatePath('/');
-    revalidatePath('/?conversationId=*');
+    revalidatePath(`/?conversationId=${conversationId}`);
     return { success: true, message: 'Message added.' };
   } catch (error) {
     console.error('Add message error:', error);
@@ -116,7 +116,7 @@ export async function getConversations() {
             _id: 1,
             title: 1,
             createdAt: 1,
-            messages: { $slice: 1 },
+            'messages.imageUrls': { $slice: 1 },
           },
         }
       )
@@ -125,13 +125,12 @@ export async function getConversations() {
       .toArray();
 
     const processedConversations = conversations.map((convo: any) => {
-      const firstMessage = convo.messages?.[0];
-      const imageUrl = firstMessage?.imageUrls?.[0] || null;
+      const firstImageUrl = convo.messages?.[0]?.imageUrls?.[0] || null;
       return {
         _id: convo._id,
         title: convo.title,
         createdAt: convo.createdAt,
-        firstImageUrl: imageUrl,
+        firstImageUrl: firstImageUrl,
       };
     });
 

@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { findOrCreateUserFromGoogle, setCurrentUser, logout as serverLogout } from "@/lib/actions/auth";
+import { findOrCreateUserFromGoogle, setCurrentUser, logout as serverLogout, getCurrentUser } from "@/lib/actions/auth";
 
 interface User {
   id: string;
@@ -28,41 +28,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      setIsLoading(true);
-      if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-        // User is signed in with Firebase. Ensure they exist in our database.
-        const result = await findOrCreateUserFromGoogle({
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          uid: firebaseUser.uid,
-        });
-
-        if (result.success && result.user) {
-          setUser(result.user); // Set our app's user object
-          // Also set the server-side cookie for actions
-          await setCurrentUser(result.user);
-        } else {
-          // If we can't get a user from our DB, something is wrong. Sign out.
-          await fbSignOut(auth);
-          setUser(null);
-          await serverLogout();
+    // Check for an existing cookie session first
+    getCurrentUser().then(cookieUser => {
+        if (cookieUser) {
+            setUser(cookieUser);
         }
-      } else {
-        // User is signed out.
-        setUser(null);
-        // Ensure server cookie is also cleared if firebase session ends
-        await serverLogout();
-      }
-      setIsLoading(false);
-    });
+    }).finally(() => {
+        // Then, set up the Firebase listener.
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+          setIsLoading(true);
+          if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+            // User is signed in with Firebase. Ensure they exist in our database and set the cookie.
+            const result = await findOrCreateUserFromGoogle({
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+              uid: firebaseUser.uid,
+            });
+    
+            if (result.success && result.user) {
+              setUser(result.user); 
+              await setCurrentUser(result.user);
+            } else {
+              // If we can't get a user from our DB, something is wrong. Sign out.
+              await fbSignOut(auth);
+              setUser(null);
+              await serverLogout();
+            }
+          } else {
+            // User is signed out from Firebase, but might still have a cookie session
+            // from email/password login. Let's re-verify the cookie.
+            const stillLoggedInUser = await getCurrentUser();
+            if (!stillLoggedInUser) {
+              setUser(null); // No firebase user, no cookie. Definitely logged out.
+            }
+          }
+          setIsLoading(false);
+        });
+        
+        // Initial loading is done after both cookie check and Firebase listener are ready.
+        if (isLoading) setIsLoading(false);
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+        // Cleanup subscription on unmount
+        return () => unsubscribe();
+    });
   }, []);
 
-
-  // This function is for manual, email/password login flow
   const login = (userData: User) => {
     setUser(userData);
     // The cookie is already set by the server action that performs the login
@@ -72,6 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await fbSignOut(auth); // Sign out from firebase client
+    } catch (e) {
+      console.error("Firebase sign out failed, continuing with server logout.", e);
+    }
+    try {
       await serverLogout(); // Sign out from server (clear cookie)
       setUser(null);
       router.push("/login");

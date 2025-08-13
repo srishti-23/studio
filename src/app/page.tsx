@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -31,7 +31,9 @@ interface Generation {
 function HomePageContent() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const router = useRouter();
     const searchParams = useSearchParams();
+    const conversationIdFromUrl = searchParams.get('conversationId');
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,15 +41,16 @@ function HomePageContent() {
     const [generations, setGenerations] = useState<Generation[]>([]);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [promptForRefinement, setPromptForRefinement] = useState("");
-    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl);
 
     useEffect(() => {
-        const conversationId = searchParams.get('conversationId');
-        if (conversationId) {
+        if (conversationIdFromUrl) {
+            if (conversationIdFromUrl !== activeConversationId) {
+                setActiveConversationId(conversationIdFromUrl);
+            }
             setIsGenerating(true);
             setShowImageGrid(false);
-            setActiveConversationId(conversationId);
-            getConversationById(conversationId).then(result => {
+            getConversationById(conversationIdFromUrl).then(result => {
                 if (result.success && result.conversation) {
                     setGenerations(result.conversation.messages);
                 } else {
@@ -56,14 +59,13 @@ function HomePageContent() {
                         title: "Load Error",
                         description: result.message || "Could not load conversation.",
                     });
-                    // Reset to new chat state
                     handleNewChat();
                 }
             });
         } else {
            handleNewChat();
         }
-    }, [searchParams, toast]);
+    }, [conversationIdFromUrl]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -78,6 +80,15 @@ function HomePageContent() {
     ];
 
     const handleGenerate = async (data: { prompt: string; aspectRatio: string; variations: number }) => {
+        if (!user) {
+            toast({
+                variant: "destructive",
+                title: "Authentication Error",
+                description: "You must be logged in to start a chat.",
+            });
+            return;
+        }
+
         setIsGenerating(true);
         setIsSubmitting(true);
         setShowImageGrid(false);
@@ -99,24 +110,23 @@ function HomePageContent() {
         setSelectedImage(null); 
         setPromptForRefinement(data.prompt); 
 
-        if (user) {
-            let result;
-            if (activeConversationId) {
-                result = await addMessageToConversation(activeConversationId, newGeneration);
-            } else {
-                result = await createConversation(newGeneration);
-                if (result.success && result.conversationId) {
-                    setActiveConversationId(result.conversationId);
-                }
+        let result;
+        if (activeConversationId) {
+            result = await addMessageToConversation(activeConversationId, newGeneration);
+        } else {
+            result = await createConversation(newGeneration);
+            if (result.success && result.conversationId) {
+                setActiveConversationId(result.conversationId);
+                router.push(`/?conversationId=${result.conversationId}`);
             }
+        }
 
-            if (!result.success) {
-                toast({
-                    variant: "destructive",
-                    title: "History Error",
-                    description: result.message,
-                });
-            }
+        if (!result.success) {
+            toast({
+                variant: "destructive",
+                title: "History Error",
+                description: result.message,
+            });
         }
     };
     
@@ -132,6 +142,9 @@ function HomePageContent() {
         setSelectedImage(null);
         setPromptForRefinement("");
         setActiveConversationId(null);
+        if (conversationIdFromUrl) {
+            router.push('/');
+        }
     };
     
     const handleImageSelect = (imageUrl: string, prompt: string) => {

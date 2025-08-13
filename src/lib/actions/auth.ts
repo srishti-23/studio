@@ -64,8 +64,23 @@ export async function getCurrentUser() {
     const userCookie = cookies().get('user');
     if (!userCookie) return null;
     try {
-        const user = JSON.parse(userCookie.value);
-        return user.id ? user : null;
+        const userData = JSON.parse(userCookie.value);
+        if (!userData || !userData.id) return null;
+        
+        // Optionally re-validate against the database
+        const client = await clientPromise;
+        const db = client.db('adfleek');
+        const users = db.collection('users');
+        const user = await users.findOne({ _id: new ObjectId(userData.id) });
+
+        if (!user) {
+            // Cookie is invalid, clear it
+            cookies().set('user', '', { path: '/', maxAge: 0 });
+            return null;
+        }
+        
+        return { id: user._id.toString(), email: user.email, name: user.name };
+
     } catch (e) {
         return null;
     }
@@ -79,17 +94,23 @@ export async function logout() {
 
 // --- EMAIL HELPERS ---
 function getTransporter() {
-  if (!process.env.EMAIL_FROM || !process.env.EMAIL_PASSWORD || !process.env.EMAIL_SERVER_HOST) {
+  // Use .env.local variables
+  const emailFrom = process.env.EMAIL_FROM;
+  const emailPassword = process.env.EMAIL_PASSWORD;
+  const emailHost = process.env.EMAIL_SERVER_HOST;
+  const emailPort = process.env.EMAIL_SERVER_PORT;
+
+  if (!emailFrom || !emailPassword || !emailHost || !emailPort) {
     console.warn('Email credentials are not set in .env.local file. Email sending will be skipped.');
     return null;
   }
   return nodemailer.createTransport({
-    host: process.env.EMAIL_SERVER_HOST,
-    port: parseInt(process.env.EMAIL_SERVER_PORT || '587', 10),
-    secure: (process.env.EMAIL_SERVER_PORT || '587') === '465',
+    host: emailHost,
+    port: parseInt(emailPort, 10),
+    secure: parseInt(emailPort, 10) === 465,
     auth: {
-      user: process.env.EMAIL_FROM,
-      pass: process.env.EMAIL_PASSWORD,
+      user: emailFrom,
+      pass: emailPassword,
     },
   });
 }
@@ -300,8 +321,6 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
     }
 
     const u = { id: user._id.toString(), email: user.email, name: user.name };
-    // Cookie will now be set from the client-side hook
-
     return { success: true, user: u };
   } catch (error) {
     console.error('Google user handling error:', error);
@@ -335,18 +354,11 @@ export async function sendPasswordResetLink(email: string) {
       { $set: { resetPasswordToken, resetPasswordExpires } }
     );
 
-    // --------- AUTO-DETECT BASE URL SAFELY ----------
     const h = headers();
     const proto = h.get('x-forwarded-proto') || 'http';
-    const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:3000';
+    const host = h.get('host') || 'localhost:9002';
 
-    // Prefer explicit env if present, else use detected
-    const base =
-      process.env.NEXT_PUBLIC_APP_URL &&
-      process.env.NEXT_PUBLIC_APP_URL.trim().length > 0
-        ? process.env.NEXT_PUBLIC_APP_URL
-        : `${proto}://${host}`;
-    // ------------------------------------------------
+    const base = process.env.NEXT_PUBLIC_APP_URL || `${proto}://${host}`;
 
     const resetUrl = `${base}/reset-password/${token}`;
 
@@ -359,7 +371,6 @@ export async function sendPasswordResetLink(email: string) {
         html: passwordResetTemplate(user.name || 'there', resetUrl),
       });
     } else {
-      // Dev: no SMTP setup
       console.log('--- EMAIL SENDING SKIPPED (NO CREDENTIALS) ---');
       console.log(`Password reset link for ${email}: ${resetUrl}`);
       console.log('-------------------------------------------------');
@@ -395,6 +406,11 @@ export async function resetPassword(values: z.infer<typeof passwordResetSchema>)
 
         if (!userToUpdate) {
             return { success: false, message: 'Invalid or expired password reset token.' };
+        }
+
+        const isPasswordSame = await bcrypt.compare(password, userToUpdate.password || '');
+        if(isPasswordSame) {
+            return { success: false, message: 'New password cannot be the same as the old password.' };
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
