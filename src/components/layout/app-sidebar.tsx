@@ -75,7 +75,6 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     
     const handleNewChatClick = () => {
       onNewChat();
-      router.push('/');
     }
 
   const handleConversationClick = (conversationId: string) => {
@@ -97,7 +96,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                 <X className="h-5 w-5" />
             </Button>
          </div>
-         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={handleNewChatClick} disabled={!user}>
+         <Button variant="secondary" className="w-full justify-start mt-4 bg-sidebar-accent" onClick={handleNewChatClick} disabled={isAuthLoading || !user}>
             <Plus className="mr-2 h-4 w-4" />
             New Chat
         </Button>
@@ -113,10 +112,10 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
             <SidebarGroup>
                 <SidebarGroupLabel className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent History</SidebarGroupLabel>
                 {isAuthLoading || (isLoadingHistory && user) ? (
-                    <div className="space-y-4 px-2 mt-2">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-10 w-full" />
+                    <div className="space-y-2 px-2 mt-2">
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                        <Skeleton className="h-12 w-full rounded-lg" />
+                        <Skeleton className="h-12 w-full rounded-lg" />
                     </div>
                 ) : user && conversations.length > 0 ? (
                     conversations.map(convo => (
@@ -129,7 +128,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                                     <MessageSquare className="w-5 h-5 text-muted-foreground"/>
                                 </div>
                             )}
-                            <div className="flex flex-col items-start overflow-hidden">
+                            <div className="flex flex-col items-start overflow-hidden text-left">
                                 <span className="truncate text-sm font-medium w-full">{convo.title}</span>
                                 <span className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(convo.createdAt), { addSuffix: true })}</span>
                             </div>
@@ -137,7 +136,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                     </SidebarMenuItem>
                     ))
                 ) : user ? (
-                    <p className="p-2 text-sm text-muted-foreground">No history yet.</p>
+                    <p className="p-2 text-sm text-muted-foreground">No history yet. Start a new chat!</p>
                 ) : (
                      <p className="p-2 text-sm text-muted-foreground">Log in to see your history.</p>
                 )}

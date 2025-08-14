@@ -52,17 +52,26 @@ function HomePageContent() {
         setSelectedImage(null);
         setPromptForRefinement("");
         setActiveConversationId(null);
-        if (conversationIdFromUrl) {
-            router.push('/');
-        }
-    }, [conversationIdFromUrl, router]);
+        // Important: clear the conversationId from the URL to truly reset
+        router.push('/');
+    }, [router]);
 
     useEffect(() => {
-        if (conversationIdFromUrl) {
-            if (conversationIdFromUrl !== activeConversationId) {
+        if (!isAuthLoading && conversationIdFromUrl) {
+             if (conversationIdFromUrl !== activeConversationId) {
+                if (!user) {
+                     toast({
+                        variant: "destructive",
+                        title: "Please log in",
+                        description: "You need to be logged in to view a conversation.",
+                    });
+                    router.push('/login');
+                    return;
+                }
+
                 setActiveConversationId(conversationIdFromUrl);
                 setIsLoadingConversation(true);
-                setIsGenerating(true);
+                setIsGenerating(true); 
                 setShowImageGrid(false);
 
                 getConversationById(conversationIdFromUrl).then(result => {
@@ -79,10 +88,10 @@ function HomePageContent() {
                     setIsLoadingConversation(false);
                 });
             }
-        } else {
+        } else if (!isAuthLoading && !conversationIdFromUrl) {
            handleNewChat();
         }
-    }, [conversationIdFromUrl, activeConversationId, handleNewChat, toast]);
+    }, [conversationIdFromUrl, activeConversationId, handleNewChat, toast, isAuthLoading, user, router]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
@@ -127,7 +136,6 @@ function HomePageContent() {
           refinedFrom: isRefinement ? selectedImage : undefined,
         };
         
-        // Optimistically update UI
         setGenerations(prev => [...prev, {...newGeneration, id: Date.now() }]);
         setSelectedImage(null); 
         setPromptForRefinement(data.prompt); 
@@ -138,24 +146,21 @@ function HomePageContent() {
         } else {
             result = await createConversation(newGeneration);
             if (result.success && result.conversationId) {
-                // IMPORTANT: Update URL to reflect the new conversation ID
-                router.push(`/?conversationId=${result.conversationId}`);
+                router.push(`/?conversationId=${result.conversationId}`, { scroll: false });
                 setActiveConversationId(result.conversationId);
             }
         }
-
-        if (!result.success) {
+        
+        if (result && !result.success) {
             toast({
                 variant: "destructive",
                 title: "History Error",
                 description: result.message,
             });
-            // Optional: revert optimistic update if save fails
             setGenerations(prev => prev.slice(0, -1));
         }
 
-        // This would be replaced by a real check on the AI generation status
-        setTimeout(() => setIsSubmitting(false), 2000); 
+        setIsSubmitting(false);
     };
     
     const handleGenerationComplete = () => {

@@ -1,4 +1,3 @@
-
 'use server';
 
 import { revalidatePath } from 'next/cache';
@@ -24,7 +23,8 @@ export async function createConversation(
 ) {
   const user = await getCurrentUser();
   if (!user) {
-    return { success: false, message: 'User not authenticated.' };
+    // Silently fail for non-logged in users
+    return { success: true, conversationId: null };
   }
 
   try {
@@ -43,7 +43,6 @@ export async function createConversation(
     const result = await conversationsCollection.insertOne(newConversation);
 
     revalidatePath('/');
-    revalidatePath('/?conversationId=');
     return { success: true, conversationId: result.insertedId.toString() };
   } catch (error) {
     console.error('Create conversation error:', error);
@@ -60,7 +59,8 @@ export async function addMessageToConversation(
 ) {
   const user = await getCurrentUser();
   if (!user) {
-    return { success: false, message: 'User not authenticated.' };
+     // Silently fail for non-logged in users
+    return { success: true };
   }
 
   try {
