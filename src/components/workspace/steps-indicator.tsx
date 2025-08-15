@@ -1,5 +1,6 @@
+
 import { CheckCircle, Circle, Download, LoaderCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StepProps {
@@ -26,7 +27,7 @@ const Step = ({ step, title, description, isCompleted, isActive }: StepProps) =>
         >
           <Icon className={cn("h-4 w-4", isActive && "animate-spin")} />
         </div>
-        <div className="h-10 w-px bg-border" />
+        <div className="h-16 w-px bg-border" />
       </div>
       <div className="pt-1">
         <h4
@@ -60,15 +61,13 @@ export default function StepsIndicator({ currentStep, prompt }: StepsIndicatorPr
     ];
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Your Workflow</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card className="border-none shadow-none bg-transparent">
+            <CardContent className="p-0">
                 <div className="flex flex-col">
                     {steps.map((step, index) => (
                         <Step
                             key={step.id}
+                            step={step.id}
                             title={step.title}
                             description={step.id === 1 ? step.description : undefined}
                             isCompleted={currentStep > step.id}
@@ -87,7 +86,7 @@ export default function StepsIndicator({ currentStep, prompt }: StepsIndicatorPr
                             </div>
                         </div>
                         <div className="pt-1">
-                            <h4 className="font-semibold">Done</h4>
+                            <h4 className={cn("font-semibold", currentStep > 3 && "text-green-400")}>Done</h4>
                         </div>
                     </div>
                 </div>
