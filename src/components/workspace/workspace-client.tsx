@@ -99,23 +99,24 @@ const GenerationBlock = ({
   const blockRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
   const { user } = useAuth();
+  const [isDownloaded, setIsDownloaded] = useState(false);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isLast) {
       setIsLoading(true);
-      setActiveStep(2);
+      setActiveStep(2); // Prompt is done, Generate is active
       timer = setTimeout(() => {
         setIsLoading(false);
         onGenerationComplete();
-        setActiveStep(3);
+        setActiveStep(3); // Generate is done, Download is active
         if (generation.isRefinement) {
             setMainImage(generation.imageUrls[0])
         }
       }, 2000); // Simulate generation time
     } else {
         setIsLoading(false);
-        setActiveStep(4); // All done
+        setActiveStep(4); // Block is not the last one, all steps are "done"
     }
     return () => clearTimeout(timer);
   }, [generation, isLast, onGenerationComplete]);
@@ -127,7 +128,6 @@ const GenerationBlock = ({
   }, [isLast, isLoading]);
 
   const handleDownload = async () => {
-    setActiveStep(3);
     try {
       if (user) {
         await addImageToLibrary(mainImage);
@@ -145,9 +145,10 @@ const GenerationBlock = ({
       window.URL.revokeObjectURL(url);
        toast({
         title: "Image Downloaded",
-        description: "The selected image has been saved to your device.",
+        description: "The selected image has been saved to your device and library.",
       });
-      setActiveStep(4);
+      setIsDownloaded(true);
+      setActiveStep(4); // Mark download as complete
     } catch (error) {
       console.error("Failed to download image:", error);
       toast({
@@ -155,7 +156,6 @@ const GenerationBlock = ({
         title: "Download Failed",
         description: "Could not download the image. Please try again.",
       });
-      setActiveStep(3); // Revert to download if failed
     }
   };
 
@@ -217,7 +217,7 @@ const GenerationBlock = ({
     <div ref={blockRef} className="container mx-auto p-4 md:p-8 flex-1 pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         <div className="lg:col-span-3">
-             <StepsIndicator currentStep={activeStep} prompt={generation.prompt} />
+             <StepsIndicator currentStep={activeStep} prompt={generation.prompt} isDownloaded={isDownloaded}/>
         </div>
 
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
