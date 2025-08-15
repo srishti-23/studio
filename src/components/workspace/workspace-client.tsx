@@ -94,7 +94,7 @@ const GenerationBlock = ({
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
   const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : (generation.refinedFrom ?? generation.imageUrls[0]));
-  const [activeStep, setActiveStep] = useState(isLast ? 2 : 4);
+  const [activeStep, setActiveStep] = useState(isLast ? 2 : 3);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
@@ -116,7 +116,7 @@ const GenerationBlock = ({
       }, 2000); // Simulate generation time
     } else {
         setIsLoading(false);
-        setActiveStep(4); // Block is not the last one, all steps are "done"
+        setActiveStep(3); // Block is not the last one, first two steps are done
     }
     return () => clearTimeout(timer);
   }, [generation, isLast, onGenerationComplete]);
@@ -148,7 +148,6 @@ const GenerationBlock = ({
         description: "The selected image has been saved to your device and library.",
       });
       setIsDownloaded(true);
-      setActiveStep(4); // Mark download as complete
     } catch (error) {
       console.error("Failed to download image:", error);
       toast({
@@ -217,7 +216,7 @@ const GenerationBlock = ({
     <div ref={blockRef} className="container mx-auto p-4 md:p-8 flex-1 pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
         <div className="lg:col-span-3">
-             <StepsIndicator currentStep={activeStep} prompt={generation.prompt} isDownloaded={isDownloaded}/>
+             <StepsIndicator currentStep={activeStep} prompt={generation.prompt} isDownloaded={isDownloaded} />
         </div>
 
         <div className="lg:col-span-6 flex flex-col gap-4 items-center">
