@@ -94,7 +94,7 @@ const GenerationBlock = ({
 }) => {
   const [isLoading, setIsLoading] = useState(isLast);
   const [mainImage, setMainImage] = useState(generation.isRefinement ? generation.imageUrls[0] : (generation.refinedFrom ?? generation.imageUrls[0]));
-  const [activeStep, setActiveStep] = useState(isLast ? 2 : 3);
+  const [activeStep, setActiveStep] = useState(isLast ? 2 : 4);
   const { toast } = useToast();
   const blockRef = useRef<HTMLDivElement>(null);
   const [feedback, setFeedback] = useState<'liked' | 'disliked' | null>(null);
@@ -116,7 +116,7 @@ const GenerationBlock = ({
       }, 2000); // Simulate generation time
     } else {
         setIsLoading(false);
-        setActiveStep(3); // Block is not the last one, first two steps are done
+        setActiveStep(4); // Block is not the last one, so no step is "active"
     }
     return () => clearTimeout(timer);
   }, [generation, isLast, onGenerationComplete]);
