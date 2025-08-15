@@ -49,8 +49,10 @@ function HomePageContent() {
     }, [router]);
 
     useEffect(() => {
+        const isHomePage = window.location.pathname === '/';
+        
         if (!isAuthLoading && conversationIdFromUrl) {
-             if (conversationIdFromUrl !== activeConversationId) {
+            if (conversationIdFromUrl !== activeConversationId) {
                 if (!user) {
                      toast({
                         variant: "destructive",
@@ -80,8 +82,9 @@ function HomePageContent() {
                     setIsLoadingConversation(false);
                 });
             }
-        } else if (!isAuthLoading && !conversationIdFromUrl) {
-           setIsGenerating(false);
+        } else if (!isAuthLoading && !conversationIdFromUrl && isHomePage) {
+            // Only reset state if we are on the home page without a conversation ID
+            setIsGenerating(false);
             setShowImageGrid(true); 
             setGenerations([]);
             setSelectedImage(null);
