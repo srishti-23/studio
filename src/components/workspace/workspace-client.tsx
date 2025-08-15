@@ -272,45 +272,41 @@ const GenerationBlock = ({
         </div>
         
         <div className="lg:col-span-3 flex flex-col gap-8">
-          <div className="flex-1 flex flex-col">
-            <h3 className="text-lg font-headline mb-4">{!generation.isRefinement && "Variations"}</h3>
-            <div className={cn("grid gap-4", generation.variations > 1 ? "grid-cols-2" : "grid-cols-1")}>
-              {generation.imageUrls.map((url, index) => (
-                <Card
-                  key={index}
-                  className={cn(
-                    "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
-                    mainImage === url
-                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
-                      : "hover:scale-105"
-                  )}
-                  onClick={() => handleSelectAndNotify(url)}
-                >
-                  <Image
-                    src={url}
-                    alt={`Image ${index + 1}`}
-                    fill
-                    className="object-cover w-full h-full"
-                    data-ai-hint="product variation"
-                  />
-                  {generation.variations > 1 && (
-                    <Badge 
-                      variant="secondary" 
-                      className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
-                    >
-                      {index + 1}
-                    </Badge>
-                  )}
-                </Card>
-              ))}
-            </div>
-            {/* {isLast && !isLoading && (
-              <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Selected Image
-              </Button>
-            )} */}
-          </div>
+            {!generation.isRefinement && (
+                <div className="flex-1 flex flex-col">
+                    <h3 className="text-lg font-headline mb-4">Variations</h3>
+                    <div className={cn("grid gap-4", generation.variations > 1 ? "grid-cols-2" : "grid-cols-1")}>
+                    {generation.imageUrls.map((url, index) => (
+                        <Card
+                        key={index}
+                        className={cn(
+                            "aspect-square overflow-hidden cursor-pointer transition-all duration-200 relative group/variation",
+                            mainImage === url
+                            ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                            : "hover:scale-105"
+                        )}
+                        onClick={() => handleSelectAndNotify(url)}
+                        >
+                        <Image
+                            src={url}
+                            alt={`Image ${index + 1}`}
+                            fill
+                            className="object-cover w-full h-full"
+                            data-ai-hint="product variation"
+                        />
+                        {generation.variations > 1 && (
+                            <Badge 
+                            variant="secondary" 
+                            className="absolute top-2 left-2 opacity-80 group-hover/variation:opacity-100 transition-opacity"
+                            >
+                            {index + 1}
+                            </Badge>
+                        )}
+                        </Card>
+                    ))}
+                    </div>
+                </div>
+            )}
         </div>
       </div>
     </div>
