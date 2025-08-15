@@ -21,7 +21,7 @@ export default function Header({ onNewChat }: HeaderProps) {
   
   const handleNewChatClick = () => {
     onNewChat();
-    router.push('/');
+    router.push('/chat');
   }
 
   return (

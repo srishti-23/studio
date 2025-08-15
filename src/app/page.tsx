@@ -45,15 +45,7 @@ function HomePageContent() {
     const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
     const handleNewChat = useCallback(() => {
-        setIsGenerating(false);
-        setIsSubmitting(false);
-        setShowImageGrid(true); 
-        setGenerations([]);
-        setSelectedImage(null);
-        setPromptForRefinement("");
-        setActiveConversationId(null);
-        // Important: clear the conversationId from the URL to truly reset
-        router.push('/');
+        router.push('/chat');
     }, [router]);
 
     useEffect(() => {
@@ -83,15 +75,20 @@ function HomePageContent() {
                             title: "Load Error",
                             description: result.message || "Could not load conversation.",
                         });
-                        handleNewChat();
+                        router.push('/');
                     }
                     setIsLoadingConversation(false);
                 });
             }
         } else if (!isAuthLoading && !conversationIdFromUrl) {
-           handleNewChat();
+           setIsGenerating(false);
+            setShowImageGrid(true); 
+            setGenerations([]);
+            setSelectedImage(null);
+            setPromptForRefinement("");
+            setActiveConversationId(null);
         }
-    }, [conversationIdFromUrl, activeConversationId, handleNewChat, toast, isAuthLoading, user, router]);
+    }, [conversationIdFromUrl, activeConversationId, toast, isAuthLoading, user, router]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },

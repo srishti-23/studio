@@ -75,6 +75,10 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     
     const handleNewChatClick = () => {
       onNewChat();
+      router.push('/chat');
+      if (window.innerWidth < 768) { // Assuming md breakpoint
+        toggleSidebar();
+    }
     }
 
   const handleConversationClick = (conversationId: string) => {

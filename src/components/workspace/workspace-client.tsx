@@ -304,12 +304,12 @@ const GenerationBlock = ({
                 </Card>
               ))}
             </div>
-            {isLast && !isLoading && (
+            {/* {isLast && !isLoading && (
               <Button className="mt-8 w-full" size="lg" onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
                 Download Selected Image
               </Button>
-            )}
+            )} */}
           </div>
         </div>
       </div>
