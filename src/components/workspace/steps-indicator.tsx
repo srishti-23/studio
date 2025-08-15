@@ -19,7 +19,8 @@ export default function StepsIndicator({ currentStep, prompt, isDownloaded = fal
       <div className="flex flex-col justify-between p-4 h-full">
           <div className="space-y-2">
             {steps.map((step, index) => {
-                const isCompleted = currentStep > step.id || (step.id === 3 && isDownloaded);
+                const isDownloadStep = step.id === 3;
+                const isCompleted = isDownloadStep ? isDownloaded : currentStep > step.id;
                 const isActive = currentStep === step.id && !isCompleted;
                 const Icon = step.icon;
 
