@@ -37,12 +37,12 @@ export default function StepsIndicator({ currentStep, prompt, isDownloaded = fal
                                         : "border-muted-foreground text-muted-foreground"
                                 )}
                             >
-                               {isDownloadStep && !isCompleted && !isActive ? <Icon className="h-4 w-4" /> : (isActive ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />)}
+                               {isCompleted ? <CheckCircle className="h-4 w-4" /> : (isActive ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />)}
                             </div>
                             {index < steps.length - 1 && (
                                 <div className={cn(
                                     "flex-1 w-px bg-border my-2 transition-colors duration-300",
-                                    isCompleted && "bg-green-500"
+                                    (currentStep > step.id) && "bg-green-500"
                                     )} />
                             )}
                         </div>
