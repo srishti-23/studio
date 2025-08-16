@@ -31,7 +31,7 @@ import { Rocket } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../ui/dropdown-menu";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getConversations } from "@/lib/actions/history";
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from "../ui/skeleton";
@@ -54,6 +54,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
     const activeConversationId = searchParams.get('conversationId');
 
     useEffect(() => {
@@ -87,6 +88,15 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
     }
   };
 
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery) {
+        return conversations;
+    }
+    return conversations.filter(convo => 
+        convo.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [conversations, searchQuery]);
+
   return (
     <>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
@@ -105,7 +115,12 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
         </Button>
         <div className="relative mt-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search history..." className="pl-9 bg-sidebar-accent border-sidebar-border" />
+            <Input 
+              placeholder="Search history..." 
+              className="pl-9 bg-sidebar-accent border-sidebar-border" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
         </div>
       </SidebarHeader>
 
@@ -120,8 +135,8 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                         <Skeleton className="h-12 w-full rounded-lg" />
                         <Skeleton className="h-12 w-full rounded-lg" />
                     </div>
-                ) : user && conversations.length > 0 ? (
-                    conversations.map(convo => (
+                ) : user && filteredConversations.length > 0 ? (
+                    filteredConversations.map(convo => (
                     <SidebarMenuItem key={convo._id} onClick={() => handleConversationClick(convo._id)}>
                         <SidebarMenuButton className="h-auto py-2 px-2 justify-start gap-3" size="lg" isActive={activeConversationId === convo._id}>
                             {convo.firstImageUrl ? (
@@ -139,7 +154,7 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
                     </SidebarMenuItem>
                     ))
                 ) : user ? (
-                    <p className="p-2 text-sm text-muted-foreground">No history yet. Start a new chat!</p>
+                    <p className="p-2 text-sm text-muted-foreground">{searchQuery ? 'No results found.' : 'No history yet. Start a new chat!'}</p>
                 ) : (
                      <p className="p-2 text-sm text-muted-foreground">Log in to see your history.</p>
                 )}
