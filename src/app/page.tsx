@@ -36,13 +36,13 @@ function HomePageContent() {
     const searchParams = useSearchParams();
     const conversationIdFromUrl = searchParams.get('conversationId');
 
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(!!conversationIdFromUrl);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showImageGrid, setShowImageGrid] = useState(true);
+    const [showImageGrid, setShowImageGrid] = useState(!conversationIdFromUrl);
     const [generations, setGenerations] = useState<Generation[]>([]);
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [promptForRefinement, setPromptForRefinement] = useState("");
-    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationIdFromUrl);
     const [isLoadingConversation, setIsLoadingConversation] = useState(false);
 
     const handleNewChat = useCallback(() => {
@@ -120,11 +120,7 @@ function HomePageContent() {
         }
 
         setIsSubmitting(true);
-        if (!activeConversationId) {
-            setIsGenerating(true);
-            setShowImageGrid(false);
-        }
-
+        
         const isRefinement = selectedImage !== null;
         const newVariations = isRefinement ? 1 : data.variations;
         const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
@@ -138,7 +134,10 @@ function HomePageContent() {
           refinedFrom: isRefinement ? selectedImage : undefined,
         };
         
-        setGenerations(prev => [...prev, {...newGeneration, id: Date.now() }]);
+        if (activeConversationId) {
+             setGenerations(prev => [...prev, {...newGeneration, id: Date.now() }]);
+        }
+        
         setSelectedImage(null); 
         setPromptForRefinement(data.prompt); 
 
@@ -148,6 +147,10 @@ function HomePageContent() {
         } else {
             result = await createConversation(newGeneration);
             if (result.success && result.conversationId) {
+                // This is the key change: only update state after we have a conversationId and are navigating
+                setIsGenerating(true);
+                setShowImageGrid(false);
+                setGenerations([{...newGeneration, id: Date.now() }]);
                 router.push(`/?conversationId=${result.conversationId}`, { scroll: false });
                 setActiveConversationId(result.conversationId);
             }
@@ -159,7 +162,9 @@ function HomePageContent() {
                 title: "History Error",
                 description: result.message,
             });
-            setGenerations(prev => prev.slice(0, -1));
+            if (activeConversationId) {
+              setGenerations(prev => prev.slice(0, -1));
+            }
         }
 
         setIsSubmitting(false);
