@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Separator } from "../ui/separator";
 import { useAuth } from "@/hooks/use-auth";
-import { signupUser, loginUser, sendVerificationOtp } from "@/lib/actions/auth";
+import { signupUser, loginUser, sendVerificationOtp, findOrCreateUserFromGoogle } from "@/lib/actions/auth";
 import { auth } from "@/lib/firebase";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import OtpInput from "./otp-input";
@@ -166,16 +166,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      // The onAuthStateChanged listener in useAuth will handle the rest:
-      // creating the DB user, setting the server cookie, and redirecting.
-      await signInWithPopup(auth, provider);
-      // Don't set isSubmitting to false here, as the page will redirect on success.
+      const result = await signInWithPopup(auth, provider);
+      const firebaseUser = result.user;
+
+      if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+        const serverResult = await findOrCreateUserFromGoogle({
+            email: firebaseUser.email,
+            name: firebaseUser.displayName,
+            uid: firebaseUser.uid,
+        });
+
+        if (serverResult.success && serverResult.user) {
+            login(serverResult.user); // Update client state
+            toast({ title: "Google Sign-In Successful", description: "Welcome!" });
+            router.push("/");
+        } else {
+            throw new Error(serverResult.message || "Failed to sync account with server.");
+        }
+      } else {
+          throw new Error("Could not retrieve user details from Google.");
+      }
     } catch (error: any) {
-        // Only show toast if the error isn't the user closing the popup.
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
         }
-        // If sign-in fails or is cancelled, allow the user to try again.
         setIsSubmitting(false);
     }
   };
