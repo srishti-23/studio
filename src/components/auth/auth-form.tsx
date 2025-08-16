@@ -77,7 +77,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   });
   
   useEffect(() => {
-    // If user becomes available (e.g. from Google Sign In), redirect to home
+    // If user becomes available redirect to home
     if (user) {
       router.push('/');
     }
@@ -165,17 +165,19 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      // The onAuthStateChanged listener in useAuth will handle the redirect
+      // The onAuthStateChanged listener in useAuth will create the server session.
       await signInWithPopup(auth, provider);
+      
+      // After successful popup, the listener runs. Once it completes, we can redirect.
       toast({ title: "Sign-In Successful", description: "Welcome!"});
-      // The useEffect hook will now handle the redirect
+      router.push('/'); // Force redirect to sync server session.
     } catch (error: any) {
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
         }
-    } finally {
         setIsSubmitting(false);
     }
+    // No finally block for setIsSubmitting(false) because we navigate on success.
   };
 
   if (isLogin) {
