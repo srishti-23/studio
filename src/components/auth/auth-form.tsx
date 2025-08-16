@@ -56,7 +56,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { login, user } = useAuth();
+  const { login, user, isLoading: isAuthLoading } = useAuth();
   const isLogin = mode === "login";
 
   // State for signup flow
@@ -77,11 +77,12 @@ export default function AuthForm({ mode }: AuthFormProps) {
   });
   
   useEffect(() => {
-    // If user becomes available redirect to home
-    if (user) {
+    // If user becomes available (and auth is not loading), redirect.
+    // This handles the case where a logged-in user visits /login.
+    if (user && !isAuthLoading) {
       router.push('/');
     }
-  }, [user, router]);
+  }, [user, isAuthLoading, router]);
 
 
   useEffect(() => {
@@ -165,19 +166,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      // The onAuthStateChanged listener in useAuth will create the server session.
+      // The onAuthStateChanged listener in useAuth will handle the rest:
+      // creating the DB user, setting the server cookie, and redirecting.
       await signInWithPopup(auth, provider);
-      
-      // After successful popup, the listener runs. Once it completes, we can redirect.
-      toast({ title: "Sign-In Successful", description: "Welcome!"});
-      router.push('/'); // Force redirect to sync server session.
+      // Don't set isSubmitting to false here, as the page will redirect on success.
     } catch (error: any) {
+        // Only show toast if the error isn't the user closing the popup.
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
         }
+        // If sign-in fails or is cancelled, allow the user to try again.
         setIsSubmitting(false);
     }
-    // No finally block for setIsSubmitting(false) because we navigate on success.
   };
 
   if (isLogin) {
@@ -215,8 +215,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 Forgot Password?
             </Link>
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Log In"}
+          <Button type="submit" className="w-full" disabled={isSubmitting || isAuthLoading}>
+            {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : "Log In"}
           </Button>
           <div className="relative">
               <Separator className="absolute top-1/2 -translate-y-1/2" />
@@ -224,8 +224,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
           </div>
-          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
-            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
+          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isAuthLoading}>
+            {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
           </Button>
         </form>
       </Form>
@@ -310,8 +310,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
               <span className="bg-card px-2 text-muted-foreground">Or</span>
           </div>
       </div>
-      <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || signupStep === 'otp'}>
-          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
+      <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isAuthLoading || signupStep === 'otp'}>
+          {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
       </Button>
     </Form>
   );

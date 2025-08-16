@@ -5,7 +5,8 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { findOrCreateUserFromGoogle, setCurrentUser, logout as serverLogout, getCurrentUser } from "@/lib/actions/auth";
+import { findOrCreateUserFromGoogle, logout as serverLogout, getCurrentUser } from "@/lib/actions/auth";
+import { useToast } from "./use-toast";
 
 interface User {
   id: string;
@@ -26,6 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     // This effect runs once on mount to check for an existing session from the cookie.
@@ -39,38 +41,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Firebase listener for client-side auth changes (e.g. Google Sign-In)
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser && firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-        // User signed in with Google on the client.
-        // We ensure a server session (cookie) is created/updated for them.
-        setIsLoading(true);
-        const result = await findOrCreateUserFromGoogle({
-          email: firebaseUser.email,
-          name: firebaseUser.displayName,
-          uid: firebaseUser.uid,
-        });
+      // Check if there's a Firebase user but no server-side user yet.
+      // This is the primary condition for a new Google Sign-In.
+      if (firebaseUser && !user) {
+        if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
+            setIsLoading(true);
+            const result = await findOrCreateUserFromGoogle({
+              email: firebaseUser.email,
+              name: firebaseUser.displayName,
+              uid: firebaseUser.uid,
+            });
 
-        if (result.success && result.user) {
-          setUser(result.user); // Update client state
-          // Server cookie is now set by findOrCreateUserFromGoogle, so server actions will work.
-        } else {
-           console.error("Failed to find or create user from Google Sign-In.");
-           await fbSignOut(auth);
-           setUser(null);
+            if (result.success && result.user) {
+              setUser(result.user); // Update client state
+              toast({ title: "Sign-In Successful", description: "Welcome!" });
+              // The server cookie is now set, so we can safely redirect.
+              router.push('/');
+            } else {
+               toast({ variant: "destructive", title: "Sign-In Failed", description: result.message || "Could not sync your account." });
+               await fbSignOut(auth);
+               setUser(null);
+            }
+            setIsLoading(false);
         }
-        setIsLoading(false);
-      } else {
-        // This handles when a user signs out via Firebase methods, but the cookie might still exist.
-        // The `logout` function is the primary way to sign out, which clears both.
-        // If they are not the same, we trust the server-side session.
-        const userFromCookie = await getCurrentUser();
-        if (!userFromCookie) {
-            setUser(null);
+      } else if (!firebaseUser) {
+        // If firebase says no user, ensure our local state is also cleared.
+        // This handles cases where the user might have been deleted from Firebase console.
+        if (user) {
+           await serverLogout();
+           setUser(null);
         }
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
 
   const login = (userData: User) => {
