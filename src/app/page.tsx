@@ -52,7 +52,6 @@ function HomePageContent() {
     useEffect(() => {
         if (isAuthLoading) return;
 
-        // Condition 1: A conversation ID is in the URL.
         if (conversationIdFromUrl) {
             if (conversationIdFromUrl !== activeConversationId) {
                 if (!user) {
@@ -69,6 +68,7 @@ function HomePageContent() {
                 setIsLoadingConversation(true);
                 setIsGenerating(true); 
                 setShowImageGrid(false);
+                setGenerations([]);
 
                 getConversationById(conversationIdFromUrl).then(result => {
                     if (result.success && result.conversation) {
@@ -81,12 +81,11 @@ function HomePageContent() {
                         });
                         router.push('/');
                     }
+                }).finally(() => {
                     setIsLoadingConversation(false);
                 });
             }
         } 
-        // Condition 2: We are on the home page ('/') and there is NO conversation ID.
-        // This is the key change: it only resets state when actively on the root path.
         else if (pathname === '/') {
             setIsGenerating(false);
             setShowImageGrid(true); 
@@ -128,7 +127,6 @@ function HomePageContent() {
 
         const isRefinement = selectedImage !== null;
         const newVariations = isRefinement ? 1 : data.variations;
-        // This is a placeholder. In a real app, you'd get this from an AI service.
         const newImageUrls = Array.from({ length: newVariations }, (_, i) => `https://placehold.co/1024x1024.png?text=Generated+${i + 1}`);
 
         const newGeneration: Omit<Generation, 'id'> = {
