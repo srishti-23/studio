@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Rocket, Plus, Book, LogIn, Menu, User, ChevronDown, LogOut } from "lucide-react";
+import { Rocket, Plus, Book, LogIn, Menu, User, ChevronDown, LogOut, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import { useSidebar } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -50,6 +50,12 @@ export default function Header({ onNewChat }: HeaderProps) {
             <Link href="/library">
                 <Book className="h-4 w-4 mr-2" />
                 Library
+            </Link>
+        </Button>
+        <Button asChild variant="ghost" className="hidden md:inline-flex">
+            <Link href="/help">
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help
             </Link>
         </Button>
         

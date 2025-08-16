@@ -166,9 +166,11 @@ export default function AppSidebar({ onNewChat }: AppSidebarProps) {
       <SidebarFooter className="p-4 mt-auto border-t border-sidebar-border">
         <SidebarMenu>
           <SidebarMenuItem>
-             <SidebarMenuButton>
-                <HelpCircle className="h-4 w-4" />
-                <span>Help</span>
+             <SidebarMenuButton asChild>
+                <Link href="/help">
+                  <HelpCircle className="h-4 w-4" />
+                  <span>Help</span>
+                </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
