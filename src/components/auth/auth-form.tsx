@@ -77,8 +77,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
   });
   
   useEffect(() => {
-    // If user becomes available (and auth is not loading), redirect.
-    // This handles the case where a logged-in user visits /login.
     if (user && !isAuthLoading) {
       router.push('/');
     }
@@ -99,7 +97,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       const result = await loginUser(values);
       if (result.success && result.user) {
-        login(result.user); // Sets user for cookie-based session
+        login(result.user);
         toast({ title: "Login Successful", description: "Welcome back!" });
         router.push("/");
       } else {
@@ -187,9 +185,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
           throw new Error("Could not retrieve user details from Google.");
       }
     } catch (error: any) {
+        // Don't show toast if user closes popup
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
         }
+    } finally {
         setIsSubmitting(false);
     }
   };

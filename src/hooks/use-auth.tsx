@@ -28,23 +28,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // This effect runs once on mount to check for an existing session from the cookie.
-    // It establishes the initial auth state.
     const checkUserSession = async () => {
-      const userFromCookie = await getCurrentUser();
-      if (userFromCookie) {
-        setUser(userFromCookie);
+      try {
+        const userFromCookie = await getCurrentUser();
+        if (userFromCookie) {
+          setUser(userFromCookie);
+        }
+      } catch (error) {
+        console.error("Failed to check user session:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     checkUserSession();
 
-    // Firebase listener for client-side auth state changes (e.g., logout from another tab).
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (!firebaseUser && user) {
-        // If Firebase says no user, and we have a user in state, it means a logout happened.
-        // We ensure server and client state are cleared.
+        // This handles cases like token expiration detected by Firebase client SDK
+        // or signing out from another tab.
         await serverLogout();
         setUser(null);
         router.push("/login");
@@ -57,8 +59,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 
   const login = (userData: User) => {
-    // This function is called after successful login (email/pass or Google).
-    // The server action has already set the cookie. We just update the client state.
     setIsLoading(true);
     setUser(userData);
     setIsLoading(false);
