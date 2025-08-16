@@ -52,12 +52,6 @@ export default function Header({ onNewChat }: HeaderProps) {
                 Library
             </Link>
         </Button>
-        <Button asChild variant="ghost" className="hidden md:inline-flex">
-            <Link href="/help">
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Help
-            </Link>
-        </Button>
         
         {user ? (
           <DropdownMenu>
