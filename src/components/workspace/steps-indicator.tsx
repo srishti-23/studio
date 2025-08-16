@@ -32,11 +32,12 @@ export default function StepsIndicator({ currentStep, prompt, isDownloaded = fal
                                     "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors duration-300",
                                     isCompleted
                                         ? "border-green-500 bg-green-500/20 text-green-400"
-                                        : "border-muted-foreground text-muted-foreground",
-                                    isActive && "border-primary text-primary"
+                                        : isActive 
+                                        ? "border-primary text-primary"
+                                        : "border-muted-foreground text-muted-foreground"
                                 )}
                             >
-                               {isActive ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
+                               {isDownloadStep && !isCompleted && !isActive ? <Icon className="h-4 w-4" /> : (isActive ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />)}
                             </div>
                             {index < steps.length - 1 && (
                                 <div className={cn(
