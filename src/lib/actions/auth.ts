@@ -276,8 +276,10 @@ export async function loginUser(values: z.infer<typeof loginSchema>) {
 }
 
 export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUserSchema>) {
+  console.log('[AuthAction] findOrCreateUserFromGoogle called with:', values);
   const validation = googleUserSchema.safeParse(values);
   if (!validation.success) {
+    console.error('[AuthAction] Invalid input for Google user:', validation.error);
     return { success: false, message: 'Invalid input.' };
   }
   const { email, name, uid } = values;
@@ -289,7 +291,10 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
 
     let user = await users.findOne({ email });
 
-    if (!user) {
+    if (user) {
+      console.log('[AuthAction] User found:', user._id.toString());
+    } else {
+      console.log('[AuthAction] User not found, creating new user...');
       const result = await users.insertOne({
         email,
         name,
@@ -298,26 +303,31 @@ export async function findOrCreateUserFromGoogle(values: z.infer<typeof googleUs
         googleUid: uid,
         createdAt: new Date(),
       });
+      console.log('[AuthAction] New user created with ID:', result.insertedId);
 
       const librariesCollection = db.collection('libraries');
       await librariesCollection.insertOne({
         userId: result.insertedId,
         images: [],
       });
+      console.log('[AuthAction] Library created for new user.');
 
       user = await users.findOne({ _id: result.insertedId });
     }
 
     if (!user) {
+      console.error('[AuthAction] CRITICAL: Could not find or create user.');
       return { success: false, message: 'Could not find or create user.' };
     }
 
     const u = { id: user._id.toString(), email: user.email, name: user.name };
-    // This is the crucial step: set the server-side cookie for Google Sign-In users
+    console.log('[AuthAction] Setting cookie for user:', u);
     setUserCookie(u);
+    
+    console.log('[AuthAction] Returning from findOrCreateUserFromGoogle:', { success: true, user: u });
     return { success: true, user: u };
   } catch (error) {
-    console.error('Google user handling error:', error);
+    console.error('[AuthAction] Google user handling error:', error);
     return { success: false, message: 'An unexpected error occurred.' };
   }
 }

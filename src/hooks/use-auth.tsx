@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut as fbSignOut, User as FirebaseUser } from "firebase/auth";
 import { auth } from "@/lib/firebase";
-import { logout as serverLogout, getCurrentUser } from "@/lib/actions/auth";
+import { findOrCreateUserFromGoogle, setCurrentUser, logout as serverLogout, getCurrentUser } from "@/lib/actions/auth";
 
 interface User {
   id: string;
@@ -28,50 +28,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const checkUserSession = async () => {
-      try {
-        const userFromCookie = await getCurrentUser();
-        if (userFromCookie) {
-          setUser(userFromCookie);
-        }
-      } catch (error) {
-        console.error("Failed to check user session:", error);
-      } finally {
-        setIsLoading(false);
+    console.log('[useAuth] Hook mounted. Checking for existing session.');
+    // This effect runs once on mount to check for an existing session from the cookie.
+    // It establishes the initial auth state.
+    getCurrentUser().then(userFromCookie => {
+      if (userFromCookie) {
+        console.log('[useAuth] Found user in cookie:', userFromCookie);
+        setUser(userFromCookie);
+      } else {
+        console.log('[useAuth] No user found in cookie.');
       }
-    };
+      setIsLoading(false);
+    });
 
-    checkUserSession();
-
+    // Firebase listener for client-side auth changes (e.g. Google Sign-In)
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (!firebaseUser && user) {
-        // This handles cases like token expiration detected by Firebase client SDK
-        // or signing out from another tab.
-        await serverLogout();
-        setUser(null);
-        router.push("/login");
+      console.log('[useAuth] onAuthStateChanged triggered. Firebase user:', firebaseUser);
+      // This listener is now primarily for handling sign-out events or if Firebase auth state
+      // is restored from its own storage, but the primary login flow is handled in the form.
+      if (!firebaseUser) {
+        // If firebase says we're logged out, we should ensure our app state reflects that,
+        // but only if there isn't a valid server session cookie.
+        const userFromCookie = await getCurrentUser();
+        if (!userFromCookie) {
+            console.log('[useAuth] Firebase and server session agree: user is logged out.');
+            setUser(null);
+        } else {
+             console.log('[useAuth] Firebase user is null, but server session exists. Trusting server session.');
+             setUser(userFromCookie);
+        }
       }
     });
 
-    return () => unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      console.log('[useAuth] Unsubscribing from onAuthStateChanged.');
+      unsubscribe();
+    }
   }, []);
 
 
   const login = (userData: User) => {
-    setIsLoading(true);
+    console.log('[useAuth] login function called with:', userData);
+    // This function is called after successful login/signup.
+    // The server action has already set the cookie. We just update the client state.
     setUser(userData);
-    setIsLoading(false);
   };
 
   const logout = async () => {
+    console.log('[useAuth] logout function called.');
     setIsLoading(true);
     try {
       await fbSignOut(auth); // Sign out from firebase client
+      console.log('[useAuth] Firebase sign out successful.');
     } catch (e) {
-      console.error("Firebase sign out failed, continuing with server logout.", e);
+      console.error("[useAuth] Firebase sign out failed, continuing with server logout.", e);
     }
     await serverLogout(); // Sign out from server (clear cookie)
+    console.log('[useAuth] Server logout successful.');
     setUser(null); // Clear client state
     router.push("/login");
     setIsLoading(false);

@@ -56,7 +56,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
-  const { login, user, isLoading: isAuthLoading } = useAuth();
+  const { login, user } = useAuth();
   const isLogin = mode === "login";
 
   // State for signup flow
@@ -77,10 +77,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
   });
   
   useEffect(() => {
-    if (user && !isAuthLoading) {
-      router.push('/');
-    }
-  }, [user, isAuthLoading, router]);
+    // This redirect is handled by the useAuth hook now
+  }, [user, router]);
 
 
   useEffect(() => {
@@ -97,7 +95,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       const result = await loginUser(values);
       if (result.success && result.user) {
-        login(result.user);
+        login(result.user); // Sets user for cookie-based session
         toast({ title: "Login Successful", description: "Welcome back!" });
         router.push("/");
       } else {
@@ -161,31 +159,38 @@ export default function AuthForm({ mode }: AuthFormProps) {
   };
   
   const handleGoogleSignIn = async () => {
+    console.log('[AuthForm] Starting Google Sign-In...');
     setIsSubmitting(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const firebaseUser = result.user;
+      const userCredential = await signInWithPopup(auth, provider);
+      console.log('[AuthForm] Firebase Sign-In successful:', userCredential);
 
-      if (firebaseUser.email && firebaseUser.displayName && firebaseUser.uid) {
-        const serverResult = await findOrCreateUserFromGoogle({
+      const firebaseUser = userCredential.user;
+      if (firebaseUser && firebaseUser.email && firebaseUser.displayName) {
+          const userData = {
             email: firebaseUser.email,
             name: firebaseUser.displayName,
             uid: firebaseUser.uid,
-        });
+          };
+          console.log('[AuthForm] Calling findOrCreateUserFromGoogle with:', userData);
+          const result = await findOrCreateUserFromGoogle(userData);
+          console.log('[AuthForm] Server response from findOrCreateUserFromGoogle:', result);
 
-        if (serverResult.success && serverResult.user) {
-            login(serverResult.user); // Update client state
-            toast({ title: "Google Sign-In Successful", description: "Welcome!" });
-            router.push("/");
-        } else {
-            throw new Error(serverResult.message || "Failed to sync account with server.");
-        }
+          if (result.success) {
+              login(result.user);
+              toast({ title: "Sign-In Successful", description: "Welcome!"});
+              console.log('[AuthForm] Redirecting to /');
+              router.push('/');
+          } else {
+              throw new Error(result.message || "Server-side user creation failed.");
+          }
       } else {
-          throw new Error("Could not retrieve user details from Google.");
+        throw new Error("Could not retrieve user details from Google Sign-In.");
       }
+
     } catch (error: any) {
-        // Don't show toast if user closes popup
+        console.error("[AuthForm] Google Sign-In Error:", error);
         if (error.code !== 'auth/popup-closed-by-user') {
             toast({ variant: "destructive", title: "Sign-In Failed", description: error.message || "An unexpected error occurred during Google Sign-In." });
         }
@@ -229,8 +234,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 Forgot Password?
             </Link>
           </div>
-          <Button type="submit" className="w-full" disabled={isSubmitting || isAuthLoading}>
-            {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : "Log In"}
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : "Log In"}
           </Button>
           <div className="relative">
               <Separator className="absolute top-1/2 -translate-y-1/2" />
@@ -238,8 +243,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
                   <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
               </div>
           </div>
-          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isAuthLoading}>
-            {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
+          <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting}>
+            {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Google</>}
           </Button>
         </form>
       </Form>
@@ -324,8 +329,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
               <span className="bg-card px-2 text-muted-foreground">Or</span>
           </div>
       </div>
-      <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || isAuthLoading || signupStep === 'otp'}>
-          {isSubmitting || isAuthLoading ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
+      <Button variant="outline" className="w-full mt-6" type="button" onClick={handleGoogleSignIn} disabled={isSubmitting || signupStep === 'otp'}>
+          {isSubmitting ? <LoaderCircle className="animate-spin" /> : <><GoogleIcon className="mr-2" /> Sign Up with Google</>}
       </Button>
     </Form>
   );
