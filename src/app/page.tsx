@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, Suspense, useCallback } from "react";
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import AppSidebar from "@/components/layout/app-sidebar";
 import Header from "@/components/layout/header";
 import PromptForm from "@/components/home/prompt-form";
@@ -32,6 +32,7 @@ function HomePageContent() {
     const { user, isLoading: isAuthLoading } = useAuth();
     const { toast } = useToast();
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
     const conversationIdFromUrl = searchParams.get('conversationId');
 
@@ -49,9 +50,10 @@ function HomePageContent() {
     }, [router]);
 
     useEffect(() => {
-        const isHomePage = window.location.pathname === '/';
-        
-        if (!isAuthLoading && conversationIdFromUrl) {
+        if (isAuthLoading) return;
+
+        // Condition 1: A conversation ID is in the URL.
+        if (conversationIdFromUrl) {
             if (conversationIdFromUrl !== activeConversationId) {
                 if (!user) {
                      toast({
@@ -82,8 +84,10 @@ function HomePageContent() {
                     setIsLoadingConversation(false);
                 });
             }
-        } else if (!isAuthLoading && !conversationIdFromUrl && isHomePage) {
-            // Only reset state if we are on the home page without a conversation ID
+        } 
+        // Condition 2: We are on the home page ('/') and there is NO conversation ID.
+        // This is the key change: it only resets state when actively on the root path.
+        else if (pathname === '/') {
             setIsGenerating(false);
             setShowImageGrid(true); 
             setGenerations([]);
@@ -91,7 +95,7 @@ function HomePageContent() {
             setPromptForRefinement("");
             setActiveConversationId(null);
         }
-    }, [conversationIdFromUrl, activeConversationId, toast, isAuthLoading, user, router]);
+    }, [conversationIdFromUrl, activeConversationId, toast, isAuthLoading, user, router, pathname]);
 
     const initialImages = [
         { id: 1, src: 'https://placehold.co/600x800.png', alt: 'Pagoda at night 1', hint: 'pagoda night' },
